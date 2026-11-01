@@ -1,0 +1,70 @@
+{
+  "project_info": {
+    "project_number": "695569336979",
+    "project_id": "dompet-harian-dukeduk",
+    "storage_bucket": "dompet-harian-dukeduk.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:695569336979:android:a32a11d535aae41c059b66",
+        "android_client_info": {
+          "package_name": "com.dukeduk.dompet_harian_dukeduk"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "695569336979-0hk0jk8n0lec610gdl5kcvkfn2qaa3hg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.dukeduk.dompet_harian_dukeduk",
+            "certificate_hash": "4c1fbc3dce9d9fcb84e14f1599129aa40c57d6a3"
+          }
+        },
+        {
+          "client_id": "695569336979-p05sl2qncvdkidvgjitioi2nm7rpn47f.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.dukeduk.dompet_harian_dukeduk",
+            "certificate_hash": "024ee44d78c91a6c3fc855f54ff12cbdd1c8fde5"
+          }
+        },
+        {
+          "client_id": "695569336979-qgcm5qcpglr1jnj6r7k5p80u6a5daodm.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.dukeduk.dompet_harian_dukeduk",
+            "certificate_hash": "8f186be6ef0102fa2e22471ba7503824e0d2a0ac"
+          }
+        },
+        {
+          "client_id": "695569336979-ogo720erocnitfk1atlm9dm9kg5b1075.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDwTh8yMiZko98xlcu5GH6kDAG9kJ2goLI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "695569336979-ogo720erocnitfk1atlm9dm9kg5b1075.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "695569336979-klvppvd3dd7u622dr8qoa1773t56qbml.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.dukeduk.dompetHarianDukeduk"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
