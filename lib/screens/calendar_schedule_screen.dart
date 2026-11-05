@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:table_calendar/table_calendar.dart';
 import 'package:intl/intl.dart';
+
 import '../helpers/database_helper.dart';
-import '../helpers/loading_helper.dart';
+import '../helpers/Loading_Helper.dart';
 import '../models/finance_model.dart' as finance;
 
 class CalendarScheduleScreen extends StatefulWidget {
@@ -32,7 +33,8 @@ class _CalendarScheduleScreenState extends State<CalendarScheduleScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final installments = await DatabaseHelper.instance.getAllScheduleInstallments();
+      final installments = await DatabaseHelper.instance
+          .getAllScheduleInstallments();
       final categories = await DatabaseHelper.instance.getCategories();
       if (mounted) {
         setState(() {
@@ -51,13 +53,19 @@ class _CalendarScheduleScreenState extends State<CalendarScheduleScreen> {
 
   List<Map<String, dynamic>> _getInstallmentsForDay(DateTime day) {
     final dayStr = day.toIso8601String().split('T')[0];
-    return _allInstallments.where((inst) => inst['due_date'] == dayStr).toList();
+    return _allInstallments
+        .where((inst) => inst['due_date'] == dayStr)
+        .toList();
   }
 
   @override
   Widget build(BuildContext context) {
     final isEn = widget.currentLanguage == 'en';
-    final currencyFormatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final currencyFormatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
     final selectedDayInstallments = _getInstallmentsForDay(_selectedDay);
 
     return Scaffold(
@@ -67,19 +75,25 @@ class _CalendarScheduleScreenState extends State<CalendarScheduleScreen> {
         elevation: 0,
         title: Text(
           isEn ? 'Schedule Calendar' : 'Kalender Tagihan & Cicilan',
-          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF1A237E)))
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF1A237E)),
+            )
           : Column(
               children: [
                 Container(
                   color: Colors.white,
                   child: TableCalendar(
                     firstDay: DateTime(2020),
-                    lastDay: DateTime(2030),
+                    lastDay: DateTime(DateTime.now().year + 50, 12, 31),
                     focusedDay: _focusedDay,
                     calendarFormat: _calendarFormat,
                     selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
@@ -115,9 +129,18 @@ class _CalendarScheduleScreenState extends State<CalendarScheduleScreen> {
                     calendarBuilders: CalendarBuilders(
                       markerBuilder: (context, date, events) {
                         if (events.isEmpty) return null;
-                        
-                        bool hasDebt = events.any((e) => (e as Map<String, dynamic>)['type'] == 'debt' && e['is_paid'] != true);
-                        bool hasReceivable = events.any((e) => (e as Map<String, dynamic>)['type'] == 'receivable' && e['is_paid'] != true);
+
+                        bool hasDebt = events.any(
+                          (e) =>
+                              (e as Map<String, dynamic>)['type'] == 'debt' &&
+                              e['is_paid'] != true,
+                        );
+                        bool hasReceivable = events.any(
+                          (e) =>
+                              (e as Map<String, dynamic>)['type'] ==
+                                  'receivable' &&
+                              e['is_paid'] != true,
+                        );
 
                         return Positioned(
                           bottom: 1,
@@ -128,15 +151,25 @@ class _CalendarScheduleScreenState extends State<CalendarScheduleScreen> {
                                 Container(
                                   width: 6,
                                   height: 6,
-                                  margin: const EdgeInsets.symmetric(horizontal: 1),
-                                  decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 1,
+                                  ),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
                               if (hasReceivable)
                                 Container(
                                   width: 6,
                                   height: 6,
-                                  margin: const EdgeInsets.symmetric(horizontal: 1),
-                                  decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle),
+                                  margin: const EdgeInsets.symmetric(
+                                    horizontal: 1,
+                                  ),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.green,
+                                    shape: BoxShape.circle,
+                                  ),
                                 ),
                             ],
                           ),
@@ -147,19 +180,29 @@ class _CalendarScheduleScreenState extends State<CalendarScheduleScreen> {
                 ),
                 const SizedBox(height: 8),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        isEn 
-                          ? 'Schedule on ${_selectedDay.toIso8601String().split('T')[0]}' 
-                          : 'Jadwal Tanggal: ${_selectedDay.toIso8601String().split('T')[0]}',
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F172A)),
+                        isEn
+                            ? 'Schedule on ${_selectedDay.toIso8601String().split('T')[0]}'
+                            : 'Jadwal Tanggal: ${_selectedDay.toIso8601String().split('T')[0]}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: Color(0xFF0F172A),
+                        ),
                       ),
                       Text(
                         '${selectedDayInstallments.length} ${isEn ? "items" : "agenda"}',
-                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                        ),
                       ),
                     ],
                   ),
@@ -168,8 +211,13 @@ class _CalendarScheduleScreenState extends State<CalendarScheduleScreen> {
                   child: selectedDayInstallments.isEmpty
                       ? Center(
                           child: Text(
-                            isEn ? 'No installments due on this date.' : 'Tidak ada jadwal tagihan pada tanggal ini.',
-                            style: const TextStyle(color: Colors.grey, fontSize: 13),
+                            isEn
+                                ? 'No installments due on this date.'
+                                : 'Tidak ada jadwal tagihan pada tanggal ini.',
+                            style: const TextStyle(
+                              color: Colors.grey,
+                              fontSize: 13,
+                            ),
                           ),
                         )
                       : ListView.builder(
@@ -180,7 +228,9 @@ class _CalendarScheduleScreenState extends State<CalendarScheduleScreen> {
                             final String type = inst['type'];
                             final String name = inst['name'] ?? '-';
                             final int instNo = inst['installment_number'];
-                            final double amount = (inst['amount'] is int) ? (inst['amount'] as int).toDouble() : inst['amount'];
+                            final double amount = (inst['amount'] is int)
+                                ? (inst['amount'] as int).toDouble()
+                                : inst['amount'];
                             final bool isPaid = inst['is_paid'] == true;
                             final bool isDebt = type == 'debt';
 
@@ -191,33 +241,56 @@ class _CalendarScheduleScreenState extends State<CalendarScheduleScreen> {
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: isPaid 
-                                      ? Colors.green.shade200 
-                                      : (isDebt ? Colors.red.shade200 : Colors.green.shade200),
+                                  color: isPaid
+                                      ? Colors.green.shade200
+                                      : (isDebt
+                                            ? Colors.red.shade200
+                                            : Colors.green.shade200),
                                 ),
-                                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))],
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.02),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
                               ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Row(
                                           children: [
                                             Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 6,
+                                                    vertical: 2,
+                                                  ),
                                               decoration: BoxDecoration(
-                                                color: isDebt ? Colors.red.shade50 : Colors.green.shade50,
-                                                borderRadius: BorderRadius.circular(4),
+                                                color: isDebt
+                                                    ? Colors.red.shade50
+                                                    : Colors.green.shade50,
+                                                borderRadius:
+                                                    BorderRadius.circular(4),
                                               ),
                                               child: Text(
-                                                isDebt ? (isEn ? 'DEBT' : 'HUTANG') : (isEn ? 'RECEIVABLE' : 'PIUTANG'),
+                                                isDebt
+                                                    ? (isEn ? 'DEBT' : 'HUTANG')
+                                                    : (isEn
+                                                          ? 'RECEIVABLE'
+                                                          : 'PIUTANG'),
                                                 style: TextStyle(
-                                                  fontSize: 9, 
-                                                  fontWeight: FontWeight.bold, 
-                                                  color: isDebt ? Colors.red.shade700 : Colors.green.shade700
+                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: isDebt
+                                                      ? Colors.red.shade700
+                                                      : Colors.green.shade700,
                                                 ),
                                               ),
                                             ),
@@ -225,7 +298,10 @@ class _CalendarScheduleScreenState extends State<CalendarScheduleScreen> {
                                             Expanded(
                                               child: Text(
                                                 name,
-                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                ),
                                                 overflow: TextOverflow.ellipsis,
                                               ),
                                             ),
@@ -234,85 +310,183 @@ class _CalendarScheduleScreenState extends State<CalendarScheduleScreen> {
                                         const SizedBox(height: 4),
                                         Text(
                                           '${isEn ? "Installment" : "Cicilan"} #$instNo - ${currencyFormatter.format(amount)}',
-                                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+                                          style: const TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF0F172A),
+                                          ),
                                         ),
                                       ],
                                     ),
                                   ),
                                   isPaid
                                       ? Chip(
-                                          label: Text(isEn ? 'Paid' : 'Lunas', style: TextStyle(color: Colors.green.shade800, fontSize: 11)),
-                                          backgroundColor: Colors.green.shade100,
+                                          label: Text(
+                                            isEn ? 'Paid' : 'Lunas',
+                                            style: TextStyle(
+                                              color: Colors.green.shade800,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                          backgroundColor:
+                                              Colors.green.shade100,
                                         )
                                       : ElevatedButton(
                                           style: ElevatedButton.styleFrom(
-                                            backgroundColor: const Color(0xFF1A237E),
+                                            backgroundColor: const Color(
+                                              0xFF1A237E,
+                                            ),
                                             foregroundColor: Colors.white,
-                                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 12,
+                                              vertical: 8,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(8),
+                                            ),
                                           ),
-                                          onPressed: isPaid ? null : () async {
-                                            final confirmed = await showDialog<bool>(
-                                              context: context,
-                                              builder: (ctx) => AlertDialog(
-                                                title: Text(isEn ? 'Confirm Action' : 'Konfirmasi Aksi'),
-                                                content: Text(
-                                                  isDebt 
-                                                    ? (isEn ? 'Pay installment #$instNo to "$name" of ${currencyFormatter.format(amount)}?' : 'Bayar cicilan ke-$instNo kepada "$name" sebesar ${currencyFormatter.format(amount)}?')
-                                                    : (isEn ? 'Receive payment #$instNo from "$name" of ${currencyFormatter.format(amount)}?' : 'Terima cicilan ke-$instNo dari "$name" sebesar ${currencyFormatter.format(amount)}?'),
-                                                ),
-                                                actions: [
-                                                  TextButton(
-                                                    onPressed: () => Navigator.pop(ctx, false),
-                                                    child: Text(isEn ? 'Cancel' : 'Batal', style: const TextStyle(color: Colors.grey)),
-                                                  ),
-                                                  ElevatedButton(
-                                                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A237E), foregroundColor: Colors.white),
-                                                    onPressed: () => Navigator.pop(ctx, true),
-                                                    child: Text(isEn ? 'Confirm' : 'Ya, Proses'),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
+                                          onPressed: isPaid
+                                              ? null
+                                              : () async {
+                                                  final confirmed = await showDialog<bool>(
+                                                    context: context,
+                                                    builder: (ctx) => AlertDialog(
+                                                      title: Text(
+                                                        isEn
+                                                            ? 'Confirm Action'
+                                                            : 'Konfirmasi Aksi',
+                                                      ),
+                                                      content: Text(
+                                                        isDebt
+                                                            ? (isEn
+                                                                  ? 'Pay installment #$instNo to "$name" of ${currencyFormatter.format(amount)}?'
+                                                                  : 'Bayar cicilan ke-$instNo kepada "$name" sebesar ${currencyFormatter.format(amount)}?')
+                                                            : (isEn
+                                                                  ? 'Receive payment #$instNo from "$name" of ${currencyFormatter.format(amount)}?'
+                                                                  : 'Terima cicilan ke-$instNo dari "$name" sebesar ${currencyFormatter.format(amount)}?'),
+                                                      ),
+                                                      actions: [
+                                                        TextButton(
+                                                          onPressed: () =>
+                                                              Navigator.pop(
+                                                                ctx,
+                                                                false,
+                                                              ),
+                                                          child: Text(
+                                                            isEn
+                                                                ? 'Cancel'
+                                                                : 'Batal',
+                                                            style:
+                                                                const TextStyle(
+                                                                  color: Colors
+                                                                      .grey,
+                                                                ),
+                                                          ),
+                                                        ),
+                                                        ElevatedButton(
+                                                          style:
+                                                              ElevatedButton.styleFrom(
+                                                                backgroundColor:
+                                                                    const Color(
+                                                                      0xFF1A237E,
+                                                                    ),
+                                                                foregroundColor:
+                                                                    Colors
+                                                                        .white,
+                                                              ),
+                                                          onPressed: () =>
+                                                              Navigator.pop(
+                                                                ctx,
+                                                                true,
+                                                              ),
+                                                          child: Text(
+                                                            isEn
+                                                                ? 'Confirm'
+                                                                : 'Ya, Proses',
+                                                          ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
 
-                                            if (confirmed != true) return;
+                                                  if (confirmed != true) return;
 
-                                            if (!mounted) return;
-                                            LoadingHelper.show(context, message: isEn ? 'Processing...' : 'Memproses...');
+                                                  if (!mounted) return;
+                                                  LoadingHelper.show(
+                                                    context,
+                                                    message: isEn
+                                                        ? 'Processing...'
+                                                        : 'Memproses...',
+                                                  );
 
-                                            try {
-                                              final defaultCat = _categories.isNotEmpty ? (_categories.first.id ?? 1) : 1;
-                                              
-                                              await DatabaseHelper.instance.payInstallment(
-                                                inst['parent_id'],
-                                                instNo,
-                                                defaultCat,
-                                                type,
-                                                isDebt ? 'Bayar Hutang: $name' : 'Terima Piutang: $name',
-                                              );
+                                                  try {
+                                                    final defaultCat =
+                                                        _categories.isNotEmpty
+                                                        ? (_categories
+                                                                  .first
+                                                                  .id ??
+                                                              1)
+                                                        : 1;
 
-                                              await _loadData();
+                                                    await DatabaseHelper
+                                                        .instance
+                                                        .payInstallment(
+                                                          inst['parent_id'],
+                                                          instNo,
+                                                          defaultCat,
+                                                          type,
+                                                          isDebt
+                                                              ? 'Bayar Hutang: $name'
+                                                              : 'Terima Piutang: $name',
+                                                        );
 
-                                              if (!mounted) return;
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                SnackBar(
-                                                  content: Text(isEn ? 'Payment recorded successfully!' : 'Pembayaran cicilan berhasil dicatat!'),
-                                                  backgroundColor: Colors.green,
-                                                ),
-                                              );
-                                            } catch (e) {
-                                              if (mounted) {
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-                                                );
-                                              }
-                                            } finally {
-                                              if (mounted) {
-                                                LoadingHelper.hide(context);
-                                              }
-                                            }
-                                          },
-                                          child: Text(isDebt ? (isEn ? 'Pay' : 'Bayar') : (isEn ? 'Receive' : 'Terima'), style: const TextStyle(fontSize: 11)),
+                                                    await _loadData();
+
+                                                    if (!mounted) return;
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text(
+                                                          isEn
+                                                              ? 'Payment recorded successfully!'
+                                                              : 'Pembayaran cicilan berhasil dicatat!',
+                                                        ),
+                                                        backgroundColor:
+                                                            Colors.green,
+                                                      ),
+                                                    );
+                                                  } catch (e) {
+                                                    if (mounted) {
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        SnackBar(
+                                                          content: Text(
+                                                            'Error: $e',
+                                                          ),
+                                                          backgroundColor:
+                                                              Colors.red,
+                                                        ),
+                                                      );
+                                                    }
+                                                  } finally {
+                                                    if (mounted) {
+                                                      LoadingHelper.hide(
+                                                        context,
+                                                      );
+                                                    }
+                                                  }
+                                                },
+                                          child: Text(
+                                            isDebt
+                                                ? (isEn ? 'Pay' : 'Bayar')
+                                                : (isEn ? 'Receive' : 'Terima'),
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                            ),
+                                          ),
                                         ),
                                 ],
                               ),

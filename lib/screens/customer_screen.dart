@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../helpers/database_helper.dart';
 import '../helpers/localization_helper.dart';
-import '../helpers/loading_helper.dart';
+import '../helpers/Loading_Helper.dart';
 
 class CustomerScreen extends StatefulWidget {
   final String currentLanguage;
@@ -46,19 +47,43 @@ class _CustomerScreenState extends State<CustomerScreen> {
     showDialog(
       context: currentContext,
       builder: (dialogContext) => AlertDialog(
-        title: Text(localization.translate('delete_customer') ?? (isEn ? 'Delete Customer' : 'Hapus Pelanggan')),
-        content: Text(isEn ? 'Are you sure you want to delete "$name"?' : 'Apakah Anda yakin ingin menghapus "$name"?'),
+        title: Text(
+          localization.translate(
+            'delete_customer',
+            fallback: isEn ? 'Delete Customer' : 'Hapus Pelanggan',
+          ),
+        ),
+        content: Text(
+          isEn
+              ? 'Are you sure you want to delete "$name"?'
+              : 'Apakah Anda yakin ingin menghapus "$name"?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text(localization.translate('cancel') ?? (isEn ? 'Cancel' : 'Batal'), style: const TextStyle(color: Colors.grey)),
+            child: Text(
+              localization.translate(
+                'cancel',
+                fallback: isEn ? 'Cancel' : 'Batal',
+              ),
+              style: const TextStyle(color: Colors.grey),
+            ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () async {
               Navigator.pop(dialogContext);
-              LoadingHelper.show(currentContext, message: localization.translate('deleting') ?? (isEn ? 'Deleting...' : 'Menghapus...'));
-              
+              LoadingHelper.show(
+                currentContext,
+                message: localization.translate(
+                  'deleting',
+                  fallback: isEn ? 'Deleting...' : 'Menghapus...',
+                ),
+              );
+
               try {
                 await DatabaseHelper.instance.deleteCustomer(id);
                 await _loadCustomers();
@@ -66,7 +91,14 @@ class _CustomerScreenState extends State<CustomerScreen> {
                 if (!mounted) return;
                 ScaffoldMessenger.of(currentContext).showSnackBar(
                   SnackBar(
-                    content: Text(localization.translate('customer_deleted_success') ?? (isEn ? 'Customer deleted successfully' : 'Pelanggan berhasil dihapus')), 
+                    content: Text(
+                      localization.translate(
+                        'customer_deleted_success',
+                        fallback: isEn
+                            ? 'Customer deleted successfully'
+                            : 'Pelanggan berhasil dihapus',
+                      ),
+                    ),
                     backgroundColor: Colors.green,
                   ),
                 );
@@ -74,7 +106,9 @@ class _CustomerScreenState extends State<CustomerScreen> {
                 if (!mounted) return;
                 ScaffoldMessenger.of(currentContext).showSnackBar(
                   SnackBar(
-                    content: Text(isEn ? 'Failed to delete: $e' : 'Gagal menghapus: $e'), 
+                    content: Text(
+                      isEn ? 'Failed to delete: $e' : 'Gagal menghapus: $e',
+                    ),
                     backgroundColor: Colors.red,
                   ),
                 );
@@ -84,7 +118,12 @@ class _CustomerScreenState extends State<CustomerScreen> {
                 }
               }
             },
-            child: Text(localization.translate('delete') ?? (isEn ? 'Delete' : 'Hapus')),
+            child: Text(
+              localization.translate(
+                'delete',
+                fallback: isEn ? 'Delete' : 'Hapus',
+              ),
+            ),
           ),
         ],
       ),
@@ -94,9 +133,15 @@ class _CustomerScreenState extends State<CustomerScreen> {
   void _showCustomerForm({Map<String, dynamic>? customerToEdit}) {
     final localization = AppLocalizations(widget.currentLanguage);
     final isEn = widget.currentLanguage == 'en';
-    final nameController = TextEditingController(text: customerToEdit?['name'] ?? '');
-    final phoneController = TextEditingController(text: customerToEdit?['phone'] ?? '');
-    final addressController = TextEditingController(text: customerToEdit?['address'] ?? '');
+    final nameController = TextEditingController(
+      text: customerToEdit?['name'] ?? '',
+    );
+    final phoneController = TextEditingController(
+      text: customerToEdit?['phone'] ?? '',
+    );
+    final addressController = TextEditingController(
+      text: customerToEdit?['address'] ?? '',
+    );
     final currentContext = context;
 
     showModalBottomSheet(
@@ -119,8 +164,16 @@ class _CustomerScreenState extends State<CustomerScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                customerToEdit == null ? localization.translate('add_customer') : (localization.translate('edit_customer') ?? 'Edit Customer'),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                customerToEdit == null
+                    ? localization.translate('add_customer')
+                    : (localization.translate(
+                        'edit_customer',
+                        fallback: 'Edit Customer',
+                      )),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               const SizedBox(height: 15),
               TextField(
@@ -160,7 +213,12 @@ class _CustomerScreenState extends State<CustomerScreen> {
                     if (nameController.text.trim().isEmpty) {
                       ScaffoldMessenger.of(currentContext).showSnackBar(
                         SnackBar(
-                          content: Text(localization.translate('name_cannot_be_empty') ?? 'Nama tidak boleh kosong'),
+                          content: Text(
+                            localization.translate(
+                              'name_cannot_be_empty',
+                              fallback: 'Nama tidak boleh kosong',
+                            ),
+                          ),
                           backgroundColor: Colors.red,
                         ),
                       );
@@ -168,7 +226,13 @@ class _CustomerScreenState extends State<CustomerScreen> {
                     }
 
                     Navigator.pop(sheetContext);
-                    LoadingHelper.show(currentContext, message: localization.translate('saving') ?? 'Menyimpan...');
+                    LoadingHelper.show(
+                      currentContext,
+                      message: localization.translate(
+                        'saving',
+                        fallback: 'Menyimpan...',
+                      ),
+                    );
 
                     try {
                       Map<String, dynamic> data = {
@@ -178,23 +242,33 @@ class _CustomerScreenState extends State<CustomerScreen> {
                       };
 
                       // Jika sedang mode edit, sertakan 'id'-nya agar dikenali sebagai update
-                      if (customerToEdit != null && customerToEdit['id'] != null) {
+                      if (customerToEdit != null &&
+                          customerToEdit['id'] != null) {
                         data['id'] = customerToEdit['id'];
                       }
-                      
+
                       // Panggil fungsi saveCustomer (menangani insert & update sekaligus)
                       await DatabaseHelper.instance.saveCustomer(data);
                       await _loadCustomers();
 
                       if (!mounted) return;
                       ScaffoldMessenger.of(currentContext).showSnackBar(
-                        SnackBar(content: Text(localization.translate('customer_saved_success') ?? 'Pelanggan berhasil disimpan!')),
+                        SnackBar(
+                          content: Text(
+                            localization.translate(
+                              'customer_saved_success',
+                              fallback: 'Pelanggan berhasil disimpan!',
+                            ),
+                          ),
+                        ),
                       );
                     } catch (e) {
                       if (!mounted) return;
                       ScaffoldMessenger.of(currentContext).showSnackBar(
                         SnackBar(
-                          content: Text(isEn ? 'Failed to save: $e' : 'Gagal menyimpan: $e'), 
+                          content: Text(
+                            isEn ? 'Failed to save: $e' : 'Gagal menyimpan: $e',
+                          ),
                           backgroundColor: Colors.red,
                         ),
                       );
@@ -206,7 +280,10 @@ class _CustomerScreenState extends State<CustomerScreen> {
                   },
                   child: Text(
                     localization.translate('save'),
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),
@@ -227,71 +304,101 @@ class _CustomerScreenState extends State<CustomerScreen> {
         backgroundColor: const Color(0xFF1A237E),
         title: Text(
           localization.translate('master_customer'),
-          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF1A237E)))
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF1A237E)),
+            )
           : _customers.isEmpty
-              ? Center(
-                  child: Text(
-                    localization.translate('no_customer_found'),
-                    style: TextStyle(color: Colors.grey.shade600),
-                  ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: _customers.length,
-                  itemBuilder: (context, index) {
-                    final customer = _customers[index];
-                    final id = customer['id'] as int?;
-                    final name = customer['name']?.toString() ?? '';
-                    final phone = customer['phone']?.toString() ?? '';
-                    final address = customer['address']?.toString() ?? '';
+          ? Center(
+              child: Text(
+                localization.translate('no_customer_found'),
+                style: TextStyle(color: Colors.grey.shade600),
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: _customers.length,
+              itemBuilder: (context, index) {
+                final customer = _customers[index];
+                final id = customer['id'] as int?;
+                final name = customer['name']?.toString() ?? '';
+                final phone = customer['phone']?.toString() ?? '';
+                final address = customer['address']?.toString() ?? '';
 
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.indigo.shade100,
-                          child: Text(
-                            name.isNotEmpty ? name[0].toUpperCase() : 'C',
-                            style: TextStyle(color: Colors.indigo.shade800, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        title: Text(
-                          name,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 4),
-                            Text(' $phone', style: TextStyle(fontSize: 12, color: Colors.grey.shade700)),
-                            Text(' $address', style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
-                          ],
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.grey),
-                              onPressed: () => _showCustomerForm(customerToEdit: customer),
-                            ),
-                            if (id != null)
-                              IconButton(
-                                icon: const Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => _showDeleteConfirmation(id, name),
-                              ),
-                          ],
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.indigo.shade100,
+                      child: Text(
+                        name.isNotEmpty ? name[0].toUpperCase() : 'C',
+                        style: TextStyle(
+                          color: Colors.indigo.shade800,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    );
-                  },
-                ),
+                    ),
+                    title: Text(
+                      name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 4),
+                        Text(
+                          ' $phone',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                        Text(
+                          ' $address',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.grey),
+                          onPressed: () =>
+                              _showCustomerForm(customerToEdit: customer),
+                        ),
+                        if (id != null)
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _showDeleteConfirmation(id, name),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: const Color(0xFF1A237E),
         onPressed: () => _showCustomerForm(),

@@ -1,19 +1,25 @@
 import 'package:flutter/material.dart';
-import 'package:intl/date_symbol_data_local.dart'; 
-import 'package:firebase_core/firebase_core.dart';  
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'firebase_options.dart';                     
+
+import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'helpers/notification_helper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await NotificationHelper.init(); // <-- Inisialisasi di sini
+  try {
+    await NotificationHelper.init();
+  } catch (e) {
+    debugPrint('Notifikasi belum dapat diinisialisasi: $e');
+  }
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await initializeDateFormatting('id_ID', null);
 
   // Baca cache bahasa
   final prefs = await SharedPreferences.getInstance();
+  await prefs.remove('registered_users_key_v2');
   final String initialLanguage = prefs.getString('saved_language') ?? 'id';
 
   runApp(DompetHarianDukedukApp(initialLanguage: initialLanguage));
@@ -41,7 +47,7 @@ class _DompetHarianDukedukAppState extends State<DompetHarianDukedukApp> {
     setState(() {
       _currentLanguage = newLang;
     });
-    
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('saved_language', newLang);
   }

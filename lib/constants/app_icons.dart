@@ -4,12 +4,20 @@ class AppIcons {
   static final List<Map<String, dynamic>> availableIcons = [
     // --- Belanja & Kebutuhan ---
     {'name': 'shopping_bag', 'icon': Icons.shopping_bag, 'label': 'Belanja'},
-    {'name': 'local_grocery_store', 'icon': Icons.local_grocery_store, 'label': 'Swalayan'},
-    {'name': 'shopping_cart', 'icon': Icons.shopping_cart, 'label': 'Keranjang'},
+    {
+      'name': 'local_grocery_store',
+      'icon': Icons.local_grocery_store,
+      'label': 'Swalayan',
+    },
+    {
+      'name': 'shopping_cart',
+      'icon': Icons.shopping_cart,
+      'label': 'Keranjang',
+    },
     {'name': 'store', 'icon': Icons.store, 'label': 'Toko'},
     {'name': 'checkroom', 'icon': Icons.checkroom, 'label': 'Pakaian'},
     {'name': 'diamond', 'icon': Icons.diamond, 'label': 'Perhiasan'},
-    
+
     // --- Makanan & Minuman ---
     {'name': 'fastfood', 'icon': Icons.fastfood, 'label': 'Makanan Cepat'},
     {'name': 'restaurant', 'icon': Icons.restaurant, 'label': 'Restoran'},
@@ -24,21 +32,41 @@ class AppIcons {
     {'name': 'directions_bus', 'icon': Icons.directions_bus, 'label': 'Bus'},
     {'name': 'train', 'icon': Icons.train, 'label': 'Kereta'},
     {'name': 'local_taxi', 'icon': Icons.local_taxi, 'label': 'Taksi/Online'},
-    {'name': 'local_gas_station', 'icon': Icons.local_gas_station, 'label': 'Bensin'},
+    {
+      'name': 'local_gas_station',
+      'icon': Icons.local_gas_station,
+      'label': 'Bensin',
+    },
     {'name': 'flight', 'icon': Icons.flight, 'label': 'Pesawat/Travel'},
-    {'name': 'directions_boat', 'icon': Icons.directions_boat, 'label': 'Kapal'},
+    {
+      'name': 'directions_boat',
+      'icon': Icons.directions_boat,
+      'label': 'Kapal',
+    },
     {'name': 'local_parking', 'icon': Icons.local_parking, 'label': 'Parkir'},
 
     // --- Keuangan, Gaji & Investasi ---
-    {'name': 'account_balance_wallet', 'icon': Icons.account_balance_wallet, 'label': 'Dompet'},
+    {
+      'name': 'account_balance_wallet',
+      'icon': Icons.account_balance_wallet,
+      'label': 'Dompet',
+    },
     {'name': 'local_atm', 'icon': Icons.local_atm, 'label': 'Tunai/ATM'},
     {'name': 'payments', 'icon': Icons.payments, 'label': 'Pembayaran'},
     {'name': 'attach_money', 'icon': Icons.attach_money, 'label': 'Uang Masuk'},
     {'name': 'credit_card', 'icon': Icons.credit_card, 'label': 'Kartu Kredit'},
     {'name': 'account_balance', 'icon': Icons.account_balance, 'label': 'Bank'},
     {'name': 'trending_up', 'icon': Icons.trending_up, 'label': 'Investasi'},
-    {'name': 'request_quote', 'icon': Icons.request_quote, 'label': 'Tagihan/Invoice'},
-    {'name': 'card_giftcard', 'icon': Icons.card_giftcard, 'label': 'Hadiah/Bonus'},
+    {
+      'name': 'request_quote',
+      'icon': Icons.request_quote,
+      'label': 'Tagihan/Invoice',
+    },
+    {
+      'name': 'card_giftcard',
+      'icon': Icons.card_giftcard,
+      'label': 'Hadiah/Bonus',
+    },
     {'name': 'savings', 'icon': Icons.savings, 'label': 'Tabungan'},
 
     // --- Rumah, Utilitas & Keluarga ---
@@ -47,10 +75,18 @@ class AppIcons {
     {'name': 'bolt', 'icon': Icons.bolt, 'label': 'Listrik'},
     {'name': 'water_drop', 'icon': Icons.water_drop, 'label': 'Air/PDAM'},
     {'name': 'wifi', 'icon': Icons.wifi, 'label': 'Internet'},
-    {'name': 'phone_android', 'icon': Icons.phone_android, 'label': 'Ponsel/Pulsa'},
+    {
+      'name': 'phone_android',
+      'icon': Icons.phone_android,
+      'label': 'Ponsel/Pulsa',
+    },
     {'name': 'tv', 'icon': Icons.tv, 'label': 'Televisi/Cable'},
     {'name': 'build', 'icon': Icons.build, 'label': 'Perbaikan'},
-    {'name': 'cleaning_services', 'icon': Icons.cleaning_services, 'label': 'Kebersihan'},
+    {
+      'name': 'cleaning_services',
+      'icon': Icons.cleaning_services,
+      'label': 'Kebersihan',
+    },
 
     // --- Pekerjaan, Pendidikan & Bisnis ---
     {'name': 'work', 'icon': Icons.work, 'label': 'Kerja/Gaji'},
@@ -61,18 +97,38 @@ class AppIcons {
     {'name': 'print', 'icon': Icons.print, 'label': 'Cetak/ATK'},
 
     // --- Kesehatan & Olahraga ---
-    {'name': 'medical_services', 'icon': Icons.medical_services, 'label': 'Kesehatan'},
-    {'name': 'local_hospital', 'icon': Icons.local_hospital, 'label': 'Rumah Sakit'},
+    {
+      'name': 'medical_services',
+      'icon': Icons.medical_services,
+      'label': 'Kesehatan',
+    },
+    {
+      'name': 'local_hospital',
+      'icon': Icons.local_hospital,
+      'label': 'Rumah Sakit',
+    },
     {'name': 'medication', 'icon': Icons.medication, 'label': 'Obat/Apotek'},
-    {'name': 'fitness_center', 'icon': Icons.fitness_center, 'label': 'Fitness/Gym'},
-    {'name': 'sports_soccer', 'icon': Icons.sports_soccer, 'label': 'Sepak Bola'},
+    {
+      'name': 'fitness_center',
+      'icon': Icons.fitness_center,
+      'label': 'Fitness/Gym',
+    },
+    {
+      'name': 'sports_soccer',
+      'icon': Icons.sports_soccer,
+      'label': 'Sepak Bola',
+    },
     {'name': 'pool', 'icon': Icons.pool, 'label': 'Renang'},
 
     // --- Hiburan, Hobi & Hewan ---
     {'name': 'movie', 'icon': Icons.movie, 'label': 'Bioskop/Film'},
     {'name': 'sports_esports', 'icon': Icons.sports_esports, 'label': 'Game'},
     {'name': 'headphones', 'icon': Icons.headphones, 'label': 'Musik'},
-    {'name': 'photo_camera', 'icon': Icons.photo_camera, 'label': 'Kamera/Foto'},
+    {
+      'name': 'photo_camera',
+      'icon': Icons.photo_camera,
+      'label': 'Kamera/Foto',
+    },
     {'name': 'palette', 'icon': Icons.palette, 'label': 'Seni/Desain'},
     {'name': 'pets', 'icon': Icons.pets, 'label': 'Hewan Peliharaan'},
     {'name': 'card_travel', 'icon': Icons.card_travel, 'label': 'Liburan'},
@@ -80,8 +136,16 @@ class AppIcons {
 
     // --- Lain-lain ---
     {'name': 'security', 'icon': Icons.security, 'label': 'Asuransi/Keamanan'},
-    {'name': 'card_membership', 'icon': Icons.card_membership, 'label': 'Langganan/Member'},
-    {'name': 'volunteer_activism', 'icon': Icons.volunteer_activism, 'label': 'Donasi/Amal'},
+    {
+      'name': 'card_membership',
+      'icon': Icons.card_membership,
+      'label': 'Langganan/Member',
+    },
+    {
+      'name': 'volunteer_activism',
+      'icon': Icons.volunteer_activism,
+      'label': 'Donasi/Amal',
+    },
     {'name': 'category', 'icon': Icons.category, 'label': 'Lainnya'},
   ];
 
@@ -91,6 +155,14 @@ class AppIcons {
       orElse: () => {'icon': Icons.category},
     );
     return match['icon'] as IconData;
+  }
+
+  static IconData fromCodePoint(int codePoint) {
+    for (final entry in availableIcons) {
+      final icon = entry['icon'] as IconData;
+      if (icon.codePoint == codePoint) return icon;
+    }
+    return Icons.category;
   }
 
   static Map<String, Color> getIconThemeColor(String? iconName) {
@@ -154,7 +226,10 @@ class AppIcons {
       case 'fitness_center':
       case 'sports_soccer':
       case 'pool':
-        return {'bg': Colors.deepOrange.shade100, 'fg': Colors.deepOrange.shade800};
+        return {
+          'bg': Colors.deepOrange.shade100,
+          'fg': Colors.deepOrange.shade800,
+        };
       case 'movie':
       case 'sports_esports':
       case 'headphones':

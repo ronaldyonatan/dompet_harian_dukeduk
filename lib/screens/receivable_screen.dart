@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../helpers/database_helper.dart';
 import '../models/finance_model.dart' as finance;
 import '../models/receivable_model.dart' as receivable;
-import '../helpers/loading_helper.dart';
-import '../helpers/notification_helper.dart';
+import '../helpers/Loading_Helper.dart';
 import '../helpers/currency_formatter_helper.dart';
 
 class ReceivableScreen extends StatefulWidget {
@@ -16,7 +16,8 @@ class ReceivableScreen extends StatefulWidget {
   State<ReceivableScreen> createState() => _ReceivableScreenState();
 }
 
-class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerProviderStateMixin {
+class _ReceivableScreenState extends State<ReceivableScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   List<receivable.ReceivableModel> _receivables = [];
   List<Map<String, dynamic>> _customers = [];
@@ -41,7 +42,7 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
     setState(() => _isLoading = true);
     try {
       final receivables = await DatabaseHelper.instance.getReceivables();
-      
+
       List<Map<String, dynamic>> customers = [];
       try {
         customers = await DatabaseHelper.instance.getCustomers();
@@ -75,33 +76,55 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(isEn ? 'Delete Receivable' : 'Hapus Piutang'),
-        content: Text(isEn ? 'Are you sure you want to delete receivable for "$debtorName"?' : 'Apakah Anda yakin ingin menghapus piutang untuk "$debtorName"?'),
+        content: Text(
+          isEn
+              ? 'Are you sure you want to delete receivable for "$debtorName"?'
+              : 'Apakah Anda yakin ingin menghapus piutang untuk "$debtorName"?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: Text(isEn ? 'Cancel' : 'Batal', style: const TextStyle(color: Colors.grey)),
+            child: Text(
+              isEn ? 'Cancel' : 'Batal',
+              style: const TextStyle(color: Colors.grey),
+            ),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             onPressed: () async {
               Navigator.pop(dialogContext);
-              
+
               if (!mounted) return;
-              LoadingHelper.show(context, message: isEn ? 'Deleting...' : 'Menghapus...');
-              
+              LoadingHelper.show(
+                context,
+                message: isEn ? 'Deleting...' : 'Menghapus...',
+              );
+
               try {
-                await NotificationHelper.cancelReminder(id);
                 await DatabaseHelper.instance.deleteReceivable(id);
                 await _loadData();
 
                 if (!mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text(isEn ? 'Receivable deleted successfully' : 'Piutang berhasil dihapus'), backgroundColor: Colors.green),
+                  SnackBar(
+                    content: Text(
+                      isEn
+                          ? 'Receivable deleted successfully'
+                          : 'Piutang berhasil dihapus',
+                    ),
+                    backgroundColor: Colors.green,
+                  ),
                 );
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                    SnackBar(
+                      content: Text('Error: $e'),
+                      backgroundColor: Colors.red,
+                    ),
                   );
                 }
               } finally {
@@ -117,29 +140,63 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
     );
   }
 
-  void _showAddOrEditReceivableDialog({receivable.ReceivableModel? existingReceivable}) {
+  void _showAddOrEditReceivableDialog({
+    receivable.ReceivableModel? existingReceivable,
+  }) {
     final isEn = widget.currentLanguage == 'en';
     final isEdit = existingReceivable != null;
-    final currencyFormat = NumberFormat.currency(locale: 'id_ID', symbol: '', decimalDigits: 0);
+    final currencyFormat = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: '',
+      decimalDigits: 0,
+    );
 
-    final debtorController = TextEditingController(text: isEdit ? existingReceivable.debtorName : '');
-    final amountController = TextEditingController(text: isEdit ? currencyFormat.format(existingReceivable.amount).trim() : '');
-    final monthsController = TextEditingController(text: isEdit ? existingReceivable.installmentMonths.toString() : '1');
-    final monthlyController = TextEditingController(text: isEdit ? currencyFormat.format(existingReceivable.monthlyInstallment).trim() : '');
-    
+    final debtorController = TextEditingController(
+      text: isEdit ? existingReceivable.debtorName : '',
+    );
+    final amountController = TextEditingController(
+      text: isEdit
+          ? currencyFormat.format(existingReceivable.amount).trim()
+          : '',
+    );
+    final monthsController = TextEditingController(
+      text: isEdit ? existingReceivable.installmentMonths.toString() : '1',
+    );
+    final monthlyController = TextEditingController(
+      text: isEdit
+          ? currencyFormat.format(existingReceivable.monthlyInstallment).trim()
+          : '',
+    );
+
     int? selectedCustomerId = isEdit ? existingReceivable.customerId : null;
-    int? selectedItemId = isEdit ? existingReceivable.itemId : null; 
+    int? selectedItemId = isEdit ? existingReceivable.itemId : null;
     bool isReminderActive = isEdit ? existingReceivable.isReminderActive : true;
-    String startDate = isEdit ? existingReceivable.startDate : DateTime.now().toIso8601String().split('T')[0];
-    String dueDate = isEdit ? existingReceivable.firstDueDate : DateTime.now().toIso8601String().split('T')[0];
+    String startDate = isEdit
+        ? existingReceivable.startDate
+        : DateTime.now().toIso8601String().split('T')[0];
+    String dueDate = isEdit
+        ? existingReceivable.firstDueDate
+        : DateTime.now().toIso8601String().split('T')[0];
 
     final incomeCategoryIds = _categories
-        .where((cat) => cat.type == finance.TransactionType.income || cat.type.name.toLowerCase() == 'income' || cat.type.name.toLowerCase() == 'pendapatan')
+        .where(
+          (cat) =>
+              cat.type == finance.TransactionType.income ||
+              cat.type.name.toLowerCase() == 'income' ||
+              cat.type.name.toLowerCase() == 'pendapatan',
+        )
         .map((cat) => cat.id)
         .toSet();
 
-    final incomeItems = _items.where((item) => item.isActive && incomeCategoryIds.contains(item.categoryId)).toList();
-    final availableItems = incomeItems.isNotEmpty ? incomeItems : _items.where((item) => item.isActive).toList();
+    final incomeItems = _items
+        .where(
+          (item) =>
+              item.isActive && incomeCategoryIds.contains(item.categoryId),
+        )
+        .toList();
+    final availableItems = incomeItems.isNotEmpty
+        ? incomeItems
+        : _items.where((item) => item.isActive).toList();
 
     showDialog(
       context: context,
@@ -147,22 +204,28 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
         return StatefulBuilder(
           builder: (builderContext, setDialogState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
               title: Text(
-                isEdit 
-                  ? (isEn ? 'Edit Receivable' : 'Ubah Piutang')
-                  : (isEn ? 'Add New Receivable' : 'Tambah Piutang Baru'), 
-                style: const TextStyle(fontWeight: FontWeight.bold)
+                isEdit
+                    ? (isEn ? 'Edit Receivable' : 'Ubah Piutang')
+                    : (isEn ? 'Add New Receivable' : 'Tambah Piutang Baru'),
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     DropdownButtonFormField<int>(
-                      value: selectedCustomerId,
+                      initialValue: selectedCustomerId,
                       decoration: InputDecoration(
-                        labelText: isEn ? 'Select Customer' : 'Pilih Pelanggan / Customer',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        labelText: isEn
+                            ? 'Select Customer'
+                            : 'Pilih Pelanggan / Customer',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         isDense: true,
                       ),
                       items: _customers.map((customer) {
@@ -177,10 +240,11 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                         setDialogState(() {
                           selectedCustomerId = val;
                           final selectedCust = _customers.firstWhere(
-                            (c) => c['id'] == val, 
-                            orElse: () => {'name': ''}
+                            (c) => c['id'] == val,
+                            orElse: () => {'name': ''},
                           );
-                          final custName = selectedCust['name'] as String? ?? '';
+                          final custName =
+                              selectedCust['name'] as String? ?? '';
                           debtorController.text = custName;
                         });
                       },
@@ -189,8 +253,12 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                     TextField(
                       controller: debtorController,
                       decoration: InputDecoration(
-                        labelText: isEn ? 'Debtor Name' : 'Nama Peminjam / Debitur',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        labelText: isEn
+                            ? 'Debtor Name'
+                            : 'Nama Peminjam / Debitur',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         isDense: true,
                       ),
                     ),
@@ -202,7 +270,9 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                       decoration: InputDecoration(
                         labelText: isEn ? 'Receivable Amount' : 'Nilai Piutang',
                         prefixText: 'Rp ',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         isDense: true,
                       ),
                       onChanged: (val) {
@@ -210,7 +280,9 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                         final amt = double.tryParse(cleanVal) ?? 0;
                         final months = int.tryParse(monthsController.text) ?? 1;
                         if (months > 0) {
-                          monthlyController.text = currencyFormat.format(amt / months).trim();
+                          monthlyController.text = currencyFormat
+                              .format(amt / months)
+                              .trim();
                         }
                       },
                     ),
@@ -219,16 +291,25 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                       controller: monthsController,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
-                        labelText: isEn ? 'Installment (Months)' : 'Lama Cicilan (Bulan)',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        labelText: isEn
+                            ? 'Installment (Months)'
+                            : 'Lama Cicilan (Bulan)',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         isDense: true,
                       ),
                       onChanged: (val) {
                         final months = int.tryParse(val) ?? 1;
-                        final cleanAmt = amountController.text.replaceAll(RegExp(r'[^0-9]'), '');
+                        final cleanAmt = amountController.text.replaceAll(
+                          RegExp(r'[^0-9]'),
+                          '',
+                        );
                         final amt = double.tryParse(cleanAmt) ?? 0;
                         if (months > 0) {
-                          monthlyController.text = currencyFormat.format(amt / months).trim();
+                          monthlyController.text = currencyFormat
+                              .format(amt / months)
+                              .trim();
                         }
                       },
                     ),
@@ -238,9 +319,13 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                       keyboardType: TextInputType.number,
                       inputFormatters: [CurrencyInputFormatter()],
                       decoration: InputDecoration(
-                        labelText: isEn ? 'Monthly Installment' : 'Cicilan per Bulan',
+                        labelText: isEn
+                            ? 'Monthly Installment'
+                            : 'Cicilan per Bulan',
                         prefixText: 'Rp ',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         isDense: true,
                       ),
                     ),
@@ -250,7 +335,9 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                       readOnly: true,
                       decoration: InputDecoration(
                         labelText: isEn ? 'Start Date' : 'Tgl Mulai',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         isDense: true,
                         suffixIcon: const Icon(Icons.calendar_today, size: 18),
                       ),
@@ -263,7 +350,11 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                           lastDate: DateTime(2030),
                         );
                         if (picked != null) {
-                          setDialogState(() => startDate = picked.toIso8601String().split('T')[0]);
+                          setDialogState(
+                            () => startDate = picked.toIso8601String().split(
+                              'T',
+                            )[0],
+                          );
                         }
                       },
                     ),
@@ -272,7 +363,9 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                       readOnly: true,
                       decoration: InputDecoration(
                         labelText: isEn ? 'First Due Date' : 'Tgl Jatuh Tempo',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         isDense: true,
                         suffixIcon: const Icon(Icons.calendar_today, size: 18),
                       ),
@@ -285,32 +378,50 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                           lastDate: DateTime(2030),
                         );
                         if (picked != null) {
-                          setDialogState(() => dueDate = picked.toIso8601String().split('T')[0]);
+                          setDialogState(
+                            () => dueDate = picked.toIso8601String().split(
+                              'T',
+                            )[0],
+                          );
                         }
                       },
                     ),
                     const SizedBox(height: 12),
                     DropdownButtonFormField<int>(
-                      value: selectedItemId,
+                      initialValue: selectedItemId,
                       decoration: InputDecoration(
-                        labelText: isEn ? 'Select Item (Income)' : 'Pilih Item / Pendapatan',
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        labelText: isEn
+                            ? 'Select Item (Income)'
+                            : 'Pilih Item / Pendapatan',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         isDense: true,
                       ),
                       items: availableItems.map((item) {
                         return DropdownMenuItem<int>(
                           value: item.id,
-                          child: Text(item.name, overflow: TextOverflow.ellipsis),
+                          child: Text(
+                            item.name,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         );
                       }).toList(),
-                      onChanged: (val) => setDialogState(() => selectedItemId = val),
+                      onChanged: (val) =>
+                          setDialogState(() => selectedItemId = val),
                     ),
                     const SizedBox(height: 8),
                     SwitchListTile(
-                      title: Text(isEn ? 'Enable Payment Reminder' : 'Aktifkan Reminder Pembayaran', style: const TextStyle(fontSize: 12)),
+                      title: Text(
+                        isEn
+                            ? 'Enable Payment Reminder'
+                            : 'Aktifkan Reminder Pembayaran',
+                        style: const TextStyle(fontSize: 12),
+                      ),
                       value: isReminderActive,
-                      activeColor: const Color(0xFF1A237E),
-                      onChanged: (val) => setDialogState(() => isReminderActive = val),
+                      activeThumbColor: const Color(0xFF1A237E),
+                      onChanged: (val) =>
+                          setDialogState(() => isReminderActive = val),
                     ),
                   ],
                 ),
@@ -318,24 +429,51 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(dialogContext),
-                  child: Text(isEn ? 'Cancel' : 'Batal', style: const TextStyle(color: Colors.grey)),
+                  child: Text(
+                    isEn ? 'Cancel' : 'Batal',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF1A237E),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                   onPressed: () async {
                     final debtor = debtorController.text.trim();
-                    final amount = double.tryParse(amountController.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+                    final amount =
+                        double.tryParse(
+                          amountController.text.replaceAll(
+                            RegExp(r'[^0-9]'),
+                            '',
+                          ),
+                        ) ??
+                        0;
                     final months = int.tryParse(monthsController.text) ?? 1;
-                    final monthly = double.tryParse(monthlyController.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
+                    final monthly =
+                        double.tryParse(
+                          monthlyController.text.replaceAll(
+                            RegExp(r'[^0-9]'),
+                            '',
+                          ),
+                        ) ??
+                        0;
 
-                    if (debtor.isEmpty || amount <= 0) {
+                    if (debtor.isEmpty ||
+                        amount <= 0 ||
+                        months < 1 ||
+                        months > 600 ||
+                        monthly <= 0) {
                       ScaffoldMessenger.of(builderContext).showSnackBar(
                         SnackBar(
-                          content: Text(isEn ? 'Please enter debtor name and valid amount' : 'Mohon isi nama debitur dan nominal piutang dengan benar'),
+                          content: Text(
+                            isEn
+                                ? 'Enter name, amount, term (1–600 months), and a positive installment'
+                                : 'Isi nama, nominal, tenor 1–600 bulan, dan cicilan lebih dari nol',
+                          ),
                           backgroundColor: Colors.orange,
                         ),
                       );
@@ -343,9 +481,14 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                     }
 
                     Navigator.pop(dialogContext);
-                    
+
                     if (!mounted) return;
-                    LoadingHelper.show(context, message: isEn ? 'Saving receivable...' : 'Menyimpan piutang...');
+                    LoadingHelper.show(
+                      context,
+                      message: isEn
+                          ? 'Saving receivable...'
+                          : 'Menyimpan piutang...',
+                    );
 
                     try {
                       int savedReceivableId;
@@ -364,7 +507,9 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                           isReminderActive: isReminderActive,
                           isRealized: existingReceivable.isRealized,
                         );
-                        await DatabaseHelper.instance.updateReceivable(updatedReceivable);
+                        await DatabaseHelper.instance.updateReceivable(
+                          updatedReceivable,
+                        );
                       } else {
                         final newReceivable = receivable.ReceivableModel(
                           itemId: selectedItemId,
@@ -378,32 +523,30 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                           isReminderActive: isReminderActive,
                           isRealized: false,
                         );
-                        savedReceivableId = await DatabaseHelper.instance.insertReceivable(newReceivable);
-                      }
-
-                      if (isReminderActive) {
-                        await NotificationHelper.schedulePaymentReminder(
-                          id: savedReceivableId,
-                          title: isEn ? 'Receivable Payment Reminder' : 'Pengingat Pembayaran Piutang',
-                          body: isEn 
-                              ? 'Payment from "$debtor" is due on $dueDate' 
-                              : 'Tagihan dari "$debtor" jatuh tempo pada $dueDate',
-                          dueDate: DateTime.parse(dueDate),
-                        );
-                      } else {
-                        await NotificationHelper.cancelReminder(savedReceivableId);
+                        savedReceivableId = await DatabaseHelper.instance
+                            .insertReceivable(newReceivable);
                       }
 
                       await _loadData();
 
                       if (!mounted) return;
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(isEn ? 'Receivable saved successfully!' : 'Piutang berhasil disimpan!'), backgroundColor: Colors.green),
+                        SnackBar(
+                          content: Text(
+                            isEn
+                                ? 'Receivable saved successfully!'
+                                : 'Piutang berhasil disimpan!',
+                          ),
+                          backgroundColor: Colors.green,
+                        ),
                       );
                     } catch (e) {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+                          SnackBar(
+                            content: Text('Error: $e'),
+                            backgroundColor: Colors.red,
+                          ),
                         );
                       }
                     } finally {
@@ -422,13 +565,30 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
     );
   }
 
-  void _showInstallmentsDetailSheet(receivable.ReceivableModel receivableItem) async {
+  void _showInstallmentsDetailSheet(
+    receivable.ReceivableModel receivableItem,
+  ) async {
     final isEn = widget.currentLanguage == 'en';
-    final currencyFormatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
-    
-    final incomeCategories = _categories.where((cat) => cat.type == finance.TransactionType.income || cat.type.name.toLowerCase() == 'income' || cat.type.name.toLowerCase() == 'pendapatan').toList();
-    final availableCategories = incomeCategories.isNotEmpty ? incomeCategories : _categories;
-    int? selectedCategory = availableCategories.isNotEmpty ? availableCategories.first.id : (_categories.isNotEmpty ? _categories.first.id : 1);
+    final currencyFormatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+
+    final incomeCategories = _categories
+        .where(
+          (cat) =>
+              cat.type == finance.TransactionType.income ||
+              cat.type.name.toLowerCase() == 'income' ||
+              cat.type.name.toLowerCase() == 'pendapatan',
+        )
+        .toList();
+    final availableCategories = incomeCategories.isNotEmpty
+        ? incomeCategories
+        : _categories;
+    int? selectedCategory = availableCategories.isNotEmpty
+        ? availableCategories.first.id
+        : (_categories.isNotEmpty ? _categories.first.id : 1);
 
     showModalBottomSheet(
       context: context,
@@ -440,17 +600,26 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
         return StatefulBuilder(
           builder: (BuildContext context, StateSetter setSheetState) {
             return FutureBuilder<List<Map<String, dynamic>>>(
-              future: DatabaseHelper.instance.getInstallments(receivableItem.id!, 'receivable'),
+              future: DatabaseHelper.instance.getInstallments(
+                receivableItem.id!,
+                'receivable',
+              ),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const SizedBox(
                     height: 250,
-                    child: Center(child: CircularProgressIndicator(color: Color(0xFF1A237E))),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF1A237E),
+                      ),
+                    ),
                   );
                 }
 
                 final installments = snapshot.data ?? [];
-                final paidCount = installments.where((i) => i['is_paid'] == true).length;
+                final paidCount = installments
+                    .where((i) => i['is_paid'] == true)
+                    .length;
                 final totalCount = installments.length;
                 final progress = totalCount > 0 ? paidCount / totalCount : 0.0;
 
@@ -467,8 +636,14 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            isEn ? 'Installment Details' : 'Rincian Cicilan: ${receivableItem.debtorName}',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A)),
+                            isEn
+                                ? 'Installment Details'
+                                : 'Rincian Cicilan: ${receivableItem.debtorName}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Color(0xFF0F172A),
+                            ),
                           ),
                           IconButton(
                             icon: const Icon(Icons.close),
@@ -481,10 +656,22 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            isEn ? 'Progress: $paidCount of $totalCount paid' : 'Status: $paidCount dari $totalCount lunas',
-                            style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.bold),
+                            isEn
+                                ? 'Progress: $paidCount of $totalCount paid'
+                                : 'Status: $paidCount dari $totalCount lunas',
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                          Text('${(progress * 100).toStringAsFixed(0)}%', style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF1A237E))),
+                          Text(
+                            '${(progress * 100).toStringAsFixed(0)}%',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF1A237E),
+                            ),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 6),
@@ -498,13 +685,21 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                       const SizedBox(height: 16),
                       Expanded(
                         child: installments.isEmpty
-                            ? Center(child: Text(isEn ? 'No installments found' : 'Belum ada jadwal cicilan'))
+                            ? Center(
+                                child: Text(
+                                  isEn
+                                      ? 'No installments found'
+                                      : 'Belum ada jadwal cicilan',
+                                ),
+                              )
                             : ListView.builder(
                                 itemCount: installments.length,
                                 itemBuilder: (context, index) {
                                   final inst = installments[index];
                                   final int instNo = inst['installment_number'];
-                                  final double amt = (inst['amount'] is int) ? (inst['amount'] as int).toDouble() : inst['amount'];
+                                  final double amt = (inst['amount'] is int)
+                                      ? (inst['amount'] as int).toDouble()
+                                      : inst['amount'];
                                   final String dueDate = inst['due_date'];
                                   final bool isPaid = inst['is_paid'] == true;
 
@@ -512,51 +707,107 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                                     margin: const EdgeInsets.only(bottom: 10),
                                     padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
-                                      color: isPaid ? Colors.green.shade50 : Colors.white,
+                                      color: isPaid
+                                          ? Colors.green.shade50
+                                          : Colors.white,
                                       borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(color: isPaid ? Colors.green.shade200 : Colors.grey.shade300),
+                                      border: Border.all(
+                                        color: isPaid
+                                            ? Colors.green.shade200
+                                            : Colors.grey.shade300,
+                                      ),
                                     ),
                                     child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              isEn ? 'Installment #$instNo' : 'Cicilan ke-$instNo',
-                                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: isPaid ? Colors.green.shade800 : Colors.black87),
+                                              isEn
+                                                  ? 'Installment #$instNo'
+                                                  : 'Cicilan ke-$instNo',
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 13,
+                                                color: isPaid
+                                                    ? Colors.green.shade800
+                                                    : Colors.black87,
+                                              ),
                                             ),
                                             const SizedBox(height: 2),
-                                            Text(currencyFormatter.format(amt), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                            Text(
+                                              currencyFormatter.format(amt),
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                              ),
+                                            ),
                                             const SizedBox(height: 2),
-                                            Text('${isEn ? "Due Date" : "Jatuh Tempo"}: $dueDate', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                                            Text(
+                                              '${isEn ? "Due Date" : "Jatuh Tempo"}: $dueDate',
+                                              style: const TextStyle(
+                                                fontSize: 11,
+                                                color: Colors.grey,
+                                              ),
+                                            ),
                                           ],
                                         ),
                                         isPaid
                                             ? Chip(
-                                                label: Text(isEn ? 'Paid' : 'Lunas', style: TextStyle(color: Colors.green.shade800, fontSize: 11)),
-                                                backgroundColor: Colors.green.shade100,
+                                                label: Text(
+                                                  isEn ? 'Paid' : 'Lunas',
+                                                  style: TextStyle(
+                                                    color:
+                                                        Colors.green.shade800,
+                                                    fontSize: 11,
+                                                  ),
+                                                ),
+                                                backgroundColor:
+                                                    Colors.green.shade100,
                                               )
                                             : ElevatedButton(
                                                 style: ElevatedButton.styleFrom(
-                                                  backgroundColor: const Color(0xFF1A237E),
+                                                  backgroundColor: const Color(
+                                                    0xFF1A237E,
+                                                  ),
                                                   foregroundColor: Colors.white,
-                                                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 14,
+                                                        vertical: 8,
+                                                      ),
+                                                  shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
+                                                  ),
                                                 ),
                                                 onPressed: () async {
-                                                  final unpaidsBefore = installments.where((i) => i['installment_number'] < instNo && i['is_paid'] != true).toList();
-                                                  
+                                                  final unpaidsBefore = installments
+                                                      .where(
+                                                        (i) =>
+                                                            i['installment_number'] <
+                                                                instNo &&
+                                                            i['is_paid'] !=
+                                                                true,
+                                                      )
+                                                      .toList();
+
                                                   int targetInstNo = instNo;
-                                                  double targetAmount = amt;
-                                                  String infoText = isEn 
-                                                      ? 'Are you sure you want to receive payment for installment #$instNo of ${currencyFormatter.format(amt)}?' 
+                                                  String infoText = isEn
+                                                      ? 'Are you sure you want to receive payment for installment #$instNo of ${currencyFormatter.format(amt)}?'
                                                       : 'Yakin ingin menerima pembayaran Cicilan ke-$instNo sebesar ${currencyFormatter.format(amt)}?';
 
-                                                  if (unpaidsBefore.isNotEmpty) {
-                                                    final firstUnpaid = unpaidsBefore.first;
-                                                    targetInstNo = firstUnpaid['installment_number'];
-                                                    targetAmount = (firstUnpaid['amount'] is int) ? (firstUnpaid['amount'] as int).toDouble() : firstUnpaid['amount'];
+                                                  if (unpaidsBefore
+                                                      .isNotEmpty) {
+                                                    final firstUnpaid =
+                                                        unpaidsBefore.first;
+                                                    targetInstNo =
+                                                        firstUnpaid['installment_number'];
                                                     infoText = isEn
                                                         ? 'Installment #$targetInstNo is still unpaid. You must collect sequentially starting from the earliest. Receive payment for installment #$targetInstNo now?'
                                                         : 'Cicilan ke-$targetInstNo belum lunas. Penerimaan harus berurutan dari yang awal. Terima cicilan ke-$targetInstNo terlebih dahulu?';
@@ -565,17 +816,51 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                                                   final confirmed = await showDialog<bool>(
                                                     context: context,
                                                     builder: (dialogCtx) => AlertDialog(
-                                                      title: Text(isEn ? 'Confirm Payment Collection' : 'Konfirmasi Penerimaan Pembayaran'),
+                                                      title: Text(
+                                                        isEn
+                                                            ? 'Confirm Payment Collection'
+                                                            : 'Konfirmasi Penerimaan Pembayaran',
+                                                      ),
                                                       content: Text(infoText),
                                                       actions: [
                                                         TextButton(
-                                                          onPressed: () => Navigator.pop(dialogCtx, false),
-                                                          child: Text(isEn ? 'Cancel' : 'Batal', style: const TextStyle(color: Colors.grey)),
+                                                          onPressed: () =>
+                                                              Navigator.pop(
+                                                                dialogCtx,
+                                                                false,
+                                                              ),
+                                                          child: Text(
+                                                            isEn
+                                                                ? 'Cancel'
+                                                                : 'Batal',
+                                                            style:
+                                                                const TextStyle(
+                                                                  color: Colors
+                                                                      .grey,
+                                                                ),
+                                                          ),
                                                         ),
                                                         ElevatedButton(
-                                                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A237E), foregroundColor: Colors.white),
-                                                          onPressed: () => Navigator.pop(dialogCtx, true),
-                                                          child: Text(isEn ? 'Yes, Receive' : 'Ya, Terima'),
+                                                          style:
+                                                              ElevatedButton.styleFrom(
+                                                                backgroundColor:
+                                                                    const Color(
+                                                                      0xFF1A237E,
+                                                                    ),
+                                                                foregroundColor:
+                                                                    Colors
+                                                                        .white,
+                                                              ),
+                                                          onPressed: () =>
+                                                              Navigator.pop(
+                                                                dialogCtx,
+                                                                true,
+                                                              ),
+                                                          child: Text(
+                                                            isEn
+                                                                ? 'Yes, Receive'
+                                                                : 'Ya, Terima',
+                                                          ),
                                                         ),
                                                       ],
                                                     ),
@@ -583,38 +868,72 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
 
                                                   if (confirmed != true) return;
 
-                                                  await DatabaseHelper.instance.payInstallment(
-                                                    receivableItem.id!,
-                                                    targetInstNo,
-                                                    selectedCategory!,
-                                                    'receivable',
-                                                    'Terima Piutang: ${receivableItem.debtorName}',
-                                                  );
-                                                  
-                                                  final updatedInstallments = await DatabaseHelper.instance.getInstallments(receivableItem.id!, 'receivable');
-                                                  final allNowPaid = updatedInstallments.isNotEmpty && updatedInstallments.every((i) => i['is_paid'] == true);
+                                                  await DatabaseHelper.instance
+                                                      .payInstallment(
+                                                        receivableItem.id!,
+                                                        targetInstNo,
+                                                        selectedCategory!,
+                                                        'receivable',
+                                                        'Terima Piutang: ${receivableItem.debtorName}',
+                                                      );
+
+                                                  final updatedInstallments =
+                                                      await DatabaseHelper
+                                                          .instance
+                                                          .getInstallments(
+                                                            receivableItem.id!,
+                                                            'receivable',
+                                                          );
+                                                  final allNowPaid =
+                                                      updatedInstallments
+                                                          .isNotEmpty &&
+                                                      updatedInstallments.every(
+                                                        (i) =>
+                                                            i['is_paid'] ==
+                                                            true,
+                                                      );
 
                                                   if (allNowPaid) {
-                                                    final updatedReceivable = receivableItem.copyWith(isRealized: true);
-                                                    await DatabaseHelper.instance.updateReceivable(updatedReceivable);
+                                                    final updatedReceivable =
+                                                        receivableItem.copyWith(
+                                                          isRealized: true,
+                                                        );
+                                                    await DatabaseHelper
+                                                        .instance
+                                                        .updateReceivable(
+                                                          updatedReceivable,
+                                                        );
                                                   }
 
                                                   setSheetState(() {});
                                                   await _loadData();
 
                                                   if (!mounted) return;
-                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
                                                     SnackBar(
-                                                      content: Text(isEn ? 'Installment #$targetInstNo collected successfully!' : 'Cicilan ke-$targetInstNo berhasil diterima!'),
-                                                      backgroundColor: Colors.green,
+                                                      content: Text(
+                                                        isEn
+                                                            ? 'Installment #$targetInstNo collected successfully!'
+                                                            : 'Cicilan ke-$targetInstNo berhasil diterima!',
+                                                      ),
+                                                      backgroundColor:
+                                                          Colors.green,
                                                     ),
                                                   );
 
-                                                  if (allNowPaid && sheetContext.mounted) {
+                                                  if (allNowPaid &&
+                                                      sheetContext.mounted) {
                                                     Navigator.pop(sheetContext);
                                                   }
                                                 },
-                                                child: Text(isEn ? 'Receive' : 'Terima', style: const TextStyle(fontSize: 12)),
+                                                child: Text(
+                                                  isEn ? 'Receive' : 'Terima',
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
                                               ),
                                       ],
                                     ),
@@ -633,9 +952,16 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
     );
   }
 
-  Widget _buildReceivableList(List<receivable.ReceivableModel> list, {required bool isDoneTab}) {
+  Widget _buildReceivableList(
+    List<receivable.ReceivableModel> list, {
+    required bool isDoneTab,
+  }) {
     final isEn = widget.currentLanguage == 'en';
-    final currencyFormatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0);
+    final currencyFormatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
 
     if (list.isEmpty) {
       return Center(
@@ -651,10 +977,12 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
       itemCount: list.length,
       itemBuilder: (context, index) {
         final itemReceivable = list[index];
-        final itemName = _items.firstWhere(
-          (i) => i.id == itemReceivable.itemId, 
-          orElse: () => finance.ItemModel(name: '-', categoryId: 0)
-        ).name;
+        final itemName = _items
+            .firstWhere(
+              (i) => i.id == itemReceivable.itemId,
+              orElse: () => finance.ItemModel(name: '-', categoryId: 0),
+            )
+            .name;
 
         return Container(
           margin: const EdgeInsets.only(bottom: 12),
@@ -663,7 +991,13 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: Colors.grey.shade200),
-            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6, offset: const Offset(0, 2))],
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -673,14 +1007,27 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                 children: [
                   Text(
                     itemReceivable.debtorName,
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A)),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Color(0xFF0F172A),
+                    ),
                   ),
                   Chip(
                     label: Text(
-                      itemReceivable.isRealized ? (isEn ? 'Realized' : 'Teralisasi') : (isEn ? 'Pending' : 'Belum Teralisasi'),
-                      style: TextStyle(fontSize: 10, color: itemReceivable.isRealized ? Colors.green.shade700 : Colors.orange.shade800),
+                      itemReceivable.isRealized
+                          ? (isEn ? 'Realized' : 'Teralisasi')
+                          : (isEn ? 'Pending' : 'Belum Teralisasi'),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: itemReceivable.isRealized
+                            ? Colors.green.shade700
+                            : Colors.orange.shade800,
+                      ),
                     ),
-                    backgroundColor: itemReceivable.isRealized ? Colors.green.shade50 : Colors.orange.shade50,
+                    backgroundColor: itemReceivable.isRealized
+                        ? Colors.green.shade50
+                        : Colors.orange.shade50,
                   ),
                 ],
               ),
@@ -696,15 +1043,39 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(isEn ? 'Total Receivable' : 'Total Piutang', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                      Text(currencyFormatter.format(itemReceivable.amount), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      Text(
+                        isEn ? 'Total Receivable' : 'Total Piutang',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      Text(
+                        currencyFormatter.format(itemReceivable.amount),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
                     ],
                   ),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(isEn ? 'Monthly Installment' : 'Cicilan / Bulan', style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                      Text('${currencyFormatter.format(itemReceivable.monthlyInstallment)} (${itemReceivable.installmentMonths}x)', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                      Text(
+                        isEn ? 'Monthly Installment' : 'Cicilan / Bulan',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey,
+                        ),
+                      ),
+                      Text(
+                        '${currencyFormatter.format(itemReceivable.monthlyInstallment)} (${itemReceivable.installmentMonths}x)',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -716,14 +1087,25 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                   Row(
                     children: [
                       Icon(
-                        itemReceivable.isReminderActive ? Icons.notifications_active : Icons.notifications_off,
+                        itemReceivable.isReminderActive
+                            ? Icons.notifications_active
+                            : Icons.notifications_off,
                         size: 16,
-                        color: itemReceivable.isReminderActive ? Colors.indigo : Colors.grey,
+                        color: itemReceivable.isReminderActive
+                            ? Colors.indigo
+                            : Colors.grey,
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        itemReceivable.isReminderActive ? (isEn ? 'Reminder On' : 'Reminder Aktif') : (isEn ? 'Reminder Off' : 'Reminder Mati'),
-                        style: TextStyle(fontSize: 11, color: itemReceivable.isReminderActive ? Colors.indigo : Colors.grey),
+                        itemReceivable.isReminderActive
+                            ? (isEn ? 'Reminder On' : 'Reminder Aktif')
+                            : (isEn ? 'Reminder Off' : 'Reminder Mati'),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: itemReceivable.isReminderActive
+                              ? Colors.indigo
+                              : Colors.grey,
+                        ),
                       ),
                     ],
                   ),
@@ -734,21 +1116,43 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF1A237E),
                             foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
                           ),
                           icon: const Icon(Icons.list_alt, size: 16),
-                          label: Text(isEn ? 'Installments' : 'Detail Cicilan', style: const TextStyle(fontSize: 12)),
-                          onPressed: () => _showInstallmentsDetailSheet(itemReceivable),
+                          label: Text(
+                            isEn ? 'Installments' : 'Detail Cicilan',
+                            style: const TextStyle(fontSize: 12),
+                          ),
+                          onPressed: () =>
+                              _showInstallmentsDetailSheet(itemReceivable),
                         ),
                         const SizedBox(width: 6),
                         IconButton(
-                          icon: const Icon(Icons.edit_outlined, color: Colors.blue, size: 20),
-                          onPressed: () => _showAddOrEditReceivableDialog(existingReceivable: itemReceivable),
+                          icon: const Icon(
+                            Icons.edit_outlined,
+                            color: Colors.blue,
+                            size: 20,
+                          ),
+                          onPressed: () => _showAddOrEditReceivableDialog(
+                            existingReceivable: itemReceivable,
+                          ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                          onPressed: () => _showDeleteConfirmation(itemReceivable.id!, itemReceivable.debtorName),
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.red,
+                            size: 20,
+                          ),
+                          onPressed: () => _showDeleteConfirmation(
+                            itemReceivable.id!,
+                            itemReceivable.debtorName,
+                          ),
                         ),
                       ],
                     ),
@@ -764,7 +1168,7 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
   @override
   Widget build(BuildContext context) {
     final isEn = widget.currentLanguage == 'en';
-    
+
     final outstandingList = _receivables.where((r) => !r.isRealized).toList();
     final doneList = _receivables.where((r) => r.isRealized).toList();
 
@@ -775,7 +1179,11 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
         elevation: 0,
         title: Text(
           isEn ? 'Receivables' : 'Piutang',
-          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         bottom: TabBar(
@@ -784,13 +1192,23 @@ class _ReceivableScreenState extends State<ReceivableScreen> with SingleTickerPr
           unselectedLabelColor: Colors.white60,
           indicatorColor: Colors.white,
           tabs: [
-            Tab(text: isEn ? 'Outstanding (${outstandingList.length})' : 'Belum Teralisasi (${outstandingList.length})'),
-            Tab(text: isEn ? 'Done (${doneList.length})' : 'Histori (${doneList.length})'),
+            Tab(
+              text: isEn
+                  ? 'Outstanding (${outstandingList.length})'
+                  : 'Belum Teralisasi (${outstandingList.length})',
+            ),
+            Tab(
+              text: isEn
+                  ? 'Done (${doneList.length})'
+                  : 'Histori (${doneList.length})',
+            ),
           ],
         ),
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF1A237E)))
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF1A237E)),
+            )
           : TabBarView(
               controller: _tabController,
               children: [

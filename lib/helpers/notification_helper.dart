@@ -1,77 +1,134 @@
+import 'dart:convert';
+
+import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
+
+class PaymentReminder {
+  final String key;
+  final String title;
+  final String body;
+  final DateTime dueDate;
+  const PaymentReminder({
+    required this.key,
+    required this.title,
+    required this.body,
+    required this.dueDate,
+  });
+}
 
 class NotificationHelper {
-  static final FlutterLocalNotificationsPlugin _notificationsPlugin =
-      FlutterLocalNotificationsPlugin();
+  static final _plugin = FlutterLocalNotificationsPlugin();
+  static bool _initialized = false;
+  static const _native = MethodChannel(
+    'com.dukeduk.dompet_harian_dukeduk/payment_reminders',
+  );
 
   static Future<void> init() async {
-    tz.initializeTimeZones();
-    
-    const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    const InitializationSettings initializationSettings =
-        InitializationSettings(android: initializationSettingsAndroid);
-
-    await _notificationsPlugin.initialize(initializationSettings);
+    if (_initialized ||
+        kIsWeb ||
+        defaultTargetPlatform != TargetPlatform.android) {
+      return;
+    }
+    await _plugin.initialize(
+      const InitializationSettings(
+        android: AndroidInitializationSettings('@drawable/ic_notification'),
+      ),
+    );
+    _initialized = true;
   }
 
-  // Fungsi untuk menjadwalkan reminder dari H-3 sampai lunas (secara harian)
-  static Future<void> schedulePaymentReminder({
-    required int id,
-    required String title,
-    required String body,
-    required DateTime dueDate,
-  }) async {
-    // Waktu mulai reminder: H-3 dari tanggal jatuh tempo (jam 08:00 pagi)
-    DateTime hMinus3 = dueDate.subtract(const Duration(days: 3));
-    hMinus3 = DateTime(hMinus3.year, hMinus3.month, hMinus3.day, 11, 0, 0);
-
-    // Jika H-3 sudah lewat dari hari ini, mulai dari hari ini jam 08:00
-    DateTime startTime = hMinus3.isBefore(DateTime.now()) 
-        ? DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day, 8, 0, 0)
-        : hMinus3;
-
-    // Jadwalkan pengulangan harian sampai tanggal jatuh tempo (atau lewat dari jatuh tempo)
-    // Kita buat loop harian selama beberapa hari ke depan (misal: 10 hari berturut-turut atau hingga hari H+7)
-    for (int i = 0; i <= 10; i++) {
-      DateTime scheduledDate = startTime.add(Duration(days: i));
-      
-      // Jangan jadwalkan jika waktunya di masa lalu
-      if (scheduledDate.isBefore(DateTime.now())) continue;
-
-      int notificationId = id * 100 + i; // Unique ID per reminder
-
-      AndroidNotificationDetails androidDetails = const AndroidNotificationDetails(
-        'payment_reminder_channel',
-        'Payment Reminders',
-        channelDescription: 'Pengingat cicilan hutang dan piutang harian',
-        importance: Importance.max,
-        priority: Priority.high,
-      );
-
-      NotificationDetails platformDetails = NotificationDetails(android: androidDetails);
-
-      await _notificationsPlugin.zonedSchedule(
-        notificationId,
-        title,
-        body,
-        tz.TZDateTime.from(scheduledDate, tz.local),
-        platformDetails,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-      );
-    }
+  static Future<bool> requestPermission() async {
+    await init();
+    if (!_initialized) return false;
+    return await _plugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >()
+            ?.requestNotificationsPermission() ??
+        false;
   }
 
-  // Fungsi untuk membatalkan reminder jika sudah lunas/teralisasi
-  static Future<void> cancelReminder(int id) async {
-    for (int i = 0; i <= 10; i++) {
-      int notificationId = id * 100 + i;
-      await _notificationsPlugin.cancel(notificationId);
+  static Future<bool> notificationsEnabled() async {
+    if (!_initialized) return false;
+    return await _plugin
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >()
+            ?.areNotificationsEnabled() ??
+        false;
+  }
+
+  static Future<void> showTestNotification() async {
+    if (!await requestPermission()) {
+      throw StateError(
+        'Izin notifikasi belum diberikan. Aktifkan di pengaturan aplikasi Android.',
+      );
     }
+    await _plugin.show(
+      2147483646,
+      'Notifikasi berhasil diaktifkan',
+      'Pengingat cicilan akan ditampilkan sekitar pukul 08.00 sesuai jadwal.',
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'payment_reminder_channel',
+          'Payment Reminders',
+          channelDescription: 'Pengingat cicilan hutang dan piutang harian',
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@drawable/ic_notification',
+        ),
+      ),
+    );
+  }
+
+  static Future<void> cancelAll() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    await _native.invokeMethod<void>('replace', '[]');
+    if (_initialized) await _plugin.cancelAll();
+  }
+
+  // One native inexact alarm checks all active unpaid bills at 08:00 every day.
+  // No exact-alarm access, finite horizon, or running Flutter process is needed.
+  static Future<void> replaceReminders(List<PaymentReminder> reminders) async {
+    await init();
+    if (!_initialized) return;
+    // Clear the finite schedules and colliding IDs from previous app versions.
+    await _plugin.cancelAll();
+    await _native.invokeMethod<void>(
+      'replace',
+      jsonEncode(
+        buildPlan(reminders, DateTime.now())
+            .map(
+              (entry) => {
+                'key': entry.reminder.key,
+                'title': entry.reminder.title,
+                'body': entry.reminder.body,
+                'startDate': entry.at.toIso8601String().split('T').first,
+              },
+            )
+            .toList(),
+      ),
+    );
+  }
+
+  @visibleForTesting
+  static List<({PaymentReminder reminder, DateTime at})> buildPlan(
+    List<PaymentReminder> reminders,
+    DateTime now,
+  ) {
+    final today = DateTime(now.year, now.month, now.day, 8);
+    final next = today.isAfter(now)
+        ? today
+        : DateTime(now.year, now.month, now.day + 1, 8);
+    return reminders.map((r) {
+      final start = DateTime(
+        r.dueDate.year,
+        r.dueDate.month,
+        r.dueDate.day - 3,
+        8,
+      );
+      return (reminder: r, at: start.isAfter(next) ? start : next);
+    }).toList()..sort((a, b) => a.at.compareTo(b.at));
   }
 }

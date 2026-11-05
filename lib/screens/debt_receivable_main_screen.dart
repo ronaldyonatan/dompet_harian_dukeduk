@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'debt_screen.dart';
 import 'receivable_screen.dart'; // Nanti file ini dibuat terpisah
 
@@ -8,10 +9,12 @@ class DebtReceivableMainScreen extends StatefulWidget {
   const DebtReceivableMainScreen({super.key, required this.currentLanguage});
 
   @override
-  State<DebtReceivableMainScreen> createState() => _DebtReceivableMainScreenState();
+  State<DebtReceivableMainScreen> createState() =>
+      _DebtReceivableMainScreenState();
 }
 
-class _DebtReceivableMainScreenState extends State<DebtReceivableMainScreen> with SingleTickerProviderStateMixin {
+class _DebtReceivableMainScreenState extends State<DebtReceivableMainScreen>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -46,7 +49,10 @@ class _DebtReceivableMainScreenState extends State<DebtReceivableMainScreen> wit
           indicatorWeight: 3,
           labelColor: Colors.white,
           unselectedLabelColor: Colors.white70,
-          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 14,
+          ),
           tabs: [
             Tab(text: isEn ? 'Debts (Hutang)' : 'Hutang'),
             Tab(text: isEn ? 'Receivables (Piutang)' : 'Piutang'),
@@ -58,7 +64,7 @@ class _DebtReceivableMainScreenState extends State<DebtReceivableMainScreen> wit
         children: [
           // Tab 1: Menggunakan file DebtScreen yang sudah kita buat
           DebtScreen(currentLanguage: widget.currentLanguage),
-          
+
           // Tab 2: Menggunakan file ReceivableScreen (Akan kita buat berikutnya)
           ReceivableScreen(currentLanguage: widget.currentLanguage),
         ],

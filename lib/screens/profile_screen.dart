@@ -1,15 +1,18 @@
-import 'dart:io';
-import 'package:flutter/foundation.dart';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../helpers/auth_helper.dart';
-import '../helpers/database_helper.dart'; 
-import '../helpers/firestore_service.dart'; 
+import '../helpers/database_helper.dart';
+import '../helpers/local_sync.dart';
+import '../helpers/notification_helper.dart';
+import '../helpers/profile_image.dart';
 import '../helpers/localization_helper.dart';
-import '../helpers/loading_helper.dart'; // Import LoadingHelper global
+import '../helpers/Loading_Helper.dart'; // Import LoadingHelper global
 import 'login_screen.dart';
 import 'donate_screen.dart';
 
@@ -37,7 +40,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? _appLogoPath;
   String? _userEmail;
   bool _isBiometricActive = false;
-  bool _isCloudSyncActive = false; 
+  bool _isCloudSyncActive = false;
   final ImagePicker _picker = ImagePicker();
 
   @override
@@ -49,27 +52,84 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _checkCloudSyncStatus();
   }
 
-  // Ambil data profil langsung dari Firestore berdasarkan UID user yang sedang login di Firebase
   Future<void> _loadUserDataFromFirebase() async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser != null) {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    Map<String, dynamic> data = Map<String, dynamic>.from(
+      jsonDecode(prefs.getString('profile_cache_${user.uid}') ?? '{}') as Map,
+    );
+    void apply() {
+      if (!mounted) return;
+      setState(() {
+        _profileImagePath = data['profile_image'] as String?;
+        _appLogoPath = data['app_logo'] as String?;
+        _nameController.text =
+            data['name'] as String? ?? user.displayName ?? widget.userName;
+        _userEmail = user.email;
+      });
+      widget.onProfileUpdated(
+        _nameController.text,
+        _profileImagePath ?? '',
+        _appLogoPath ?? '',
+      );
+    }
+
+    apply();
+    if (!await LocalSync.isEnabled()) return;
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get()
+          .timeout(const Duration(seconds: 12));
+      if (doc.data() != null &&
+          !(prefs.getBool('profile_dirty_${user.uid}') ?? false)) {
+        final remote = doc.data()!;
+        data = {
+          for (final key in ['name', 'profile_image', 'app_logo'])
+            if (remote[key] != null) key: remote[key],
+        };
+        await prefs.setString('profile_cache_${user.uid}', jsonEncode(data));
+        apply();
+      }
+    } catch (e) {
+      debugPrint('Profile remains available offline: $e');
+    }
+  }
+
+  Future<void> _persistProfile() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+    final prefs = await SharedPreferences.getInstance();
+    final data = {
+      'name': _nameController.text.trim(),
+      'profile_image': _profileImagePath ?? '',
+      'app_logo': _appLogoPath ?? '',
+    };
+    await prefs.setString('profile_cache_$uid', jsonEncode(data));
+    await prefs.setBool('profile_dirty_$uid', true);
+    if (await LocalSync.isEnabled()) {
       try {
-        final doc = await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).get();
-        if (doc.exists && doc.data() != null && mounted) {
-          final data = doc.data()!;
-          setState(() {
-            _profileImagePath = data['profile_image'] as String?;
-            _appLogoPath = data['app_logo'] as String?;
-            if (data['name'] != null && (data['name'] as String).isNotEmpty) {
-              _nameController.text = data['name'];
-            }
-            _userEmail = currentUser.email;
-          });
-        }
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(uid)
+            .set({
+              ...data,
+              'updated_at': FieldValue.serverTimestamp(),
+            }, SetOptions(merge: true))
+            .timeout(const Duration(seconds: 12));
+        await prefs.setBool('profile_dirty_$uid', false);
       } catch (e) {
-        debugPrint('Error loading user data from Firebase: $e');
+        debugPrint('Profile upload pending: $e');
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadBiometricStatus() async {
@@ -81,9 +141,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _checkCloudSyncStatus() async {
     final currentUser = FirebaseAuth.instance.currentUser;
+    final enabled = await LocalSync.isEnabled();
     if (mounted) {
       setState(() {
-        _isCloudSyncActive = currentUser != null;
+        _isCloudSyncActive = enabled;
         _userEmail = currentUser?.email ?? 'Belum Login';
       });
     }
@@ -91,12 +152,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _changeLanguage(String langCode) async {
     final t = AppLocalizations(widget.currentLanguage);
-    LoadingHelper.show(context, message: t.translate('loading') ?? 'Memproses...');
-    
+    LoadingHelper.show(
+      context,
+      message: t.translate('loading', fallback: 'Memproses...'),
+    );
+
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('saved_language', langCode);
     widget.onLanguageChanged(langCode);
-    
+
     await Future.delayed(const Duration(milliseconds: 200));
     if (mounted) {
       LoadingHelper.hide(context);
@@ -104,38 +168,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  // --- PILIH GAMBAR (PROFIL / LOGO) & SIMPAN KE FIRESTORE ---
   Future<void> _pickImage(bool isProfile) async {
-    final t = AppLocalizations(widget.currentLanguage);
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery);
-    if (image != null) {
-      LoadingHelper.show(context, message: t.translate('saving') ?? 'Menyimpan gambar...');
-
-      try {
-        setState(() {
-          if (isProfile) {
-            _profileImagePath = image.path;
-          } else {
-            _appLogoPath = image.path;
-          }
-        });
-
-        // Sinkronkan perubahan path gambar ke Firestore
-        final currentUser = FirebaseAuth.instance.currentUser;
-        if (currentUser != null) {
-          await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).set({
-            'profile_image': _profileImagePath ?? '',
-            'app_logo': _appLogoPath ?? '',
-            'updated_at': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
-        }
-
-        widget.onProfileUpdated(_nameController.text.trim(), _profileImagePath ?? '', _appLogoPath ?? '');
-      } finally {
-        if (mounted) {
-          LoadingHelper.hide(context);
-        }
+    final image = await _picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 512,
+      maxHeight: 512,
+      imageQuality: 75,
+    );
+    if (image == null || !mounted) return;
+    LoadingHelper.show(context, message: 'Menyimpan gambar...');
+    try {
+      final bytes = await image.readAsBytes();
+      // Firestore documents are limited to 1 MiB; keep both images well below it.
+      if (bytes.length > 250000) {
+        throw Exception('Gambar terlalu besar. Pilih gambar yang lebih kecil.');
       }
+      final data = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+      if (!mounted) return;
+      setState(() {
+        if (isProfile) {
+          _profileImagePath = data;
+        } else {
+          _appLogoPath = data;
+        }
+      });
+      await _persistProfile();
+      if (mounted) {
+        widget.onProfileUpdated(
+          _nameController.text.trim(),
+          _profileImagePath ?? '',
+          _appLogoPath ?? '',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('$e')));
+      }
+    } finally {
+      if (mounted) LoadingHelper.hide(context);
     }
   }
 
@@ -144,31 +215,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String newName = _nameController.text.trim();
     if (newName.isEmpty) return;
 
-    LoadingHelper.show(context, message: t.translate('saving') ?? 'Menyimpan nama...');
+    LoadingHelper.show(
+      context,
+      message: t.translate('saving', fallback: 'Menyimpan nama...'),
+    );
 
     try {
+      await _persistProfile();
       final currentUser = FirebaseAuth.instance.currentUser;
-      if (currentUser != null) {
-        // Update di Firebase Auth Display Name
-        await currentUser.updateDisplayName(newName);
-
-        // Update di Cloud Firestore
-        await FirebaseFirestore.instance.collection('users').doc(currentUser.uid).set({
-          'name': newName,
-          'updated_at': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
+      if (currentUser != null && await LocalSync.isEnabled()) {
+        try {
+          await currentUser
+              .updateDisplayName(newName)
+              .timeout(const Duration(seconds: 12));
+        } catch (e) {
+          debugPrint('Nama profil sudah tersimpan lokal: $e');
+        }
       }
-
-      widget.onProfileUpdated(newName, _profileImagePath ?? '', _appLogoPath ?? '');
+      if (!mounted) return;
+      widget.onProfileUpdated(
+        newName,
+        _profileImagePath ?? '',
+        _appLogoPath ?? '',
+      );
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(t.translate('profile_updated_success')), backgroundColor: Colors.green),
+        SnackBar(
+          content: Text(t.translate('profile_updated_success')),
+          backgroundColor: Colors.green,
+        ),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal memperbarui nama: $e'), backgroundColor: Colors.red),
+        SnackBar(
+          content: Text('Gagal memperbarui nama: $e'),
+          backgroundColor: Colors.red,
+        ),
       );
     } finally {
       if (mounted) {
@@ -179,9 +263,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _toggleBiometric(bool value) async {
     final t = AppLocalizations(widget.currentLanguage);
-    
+
     if (value) {
-      LoadingHelper.show(context, message: t.translate('verifying_biometric') ?? 'Memverifikasi Biometrik...');
+      LoadingHelper.show(
+        context,
+        message: t.translate(
+          'verifying_biometric',
+          fallback: 'Memverifikasi Biometrik...',
+        ),
+      );
       bool authenticated = await AuthHelper.authenticateBiometric();
       if (mounted) LoadingHelper.hide(context);
 
@@ -190,16 +280,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (mounted) setState(() => _isBiometricActive = true);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t.translate('biometric_enabled')), backgroundColor: Colors.green),
+          SnackBar(
+            content: Text(t.translate('biometric_enabled')),
+            backgroundColor: Colors.green,
+          ),
         );
       } else {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t.translate('biometric_failed')), backgroundColor: Colors.orange),
+          SnackBar(
+            content: Text(t.translate('biometric_failed')),
+            backgroundColor: Colors.orange,
+          ),
         );
       }
     } else {
-      LoadingHelper.show(context, message: t.translate('saving') ?? 'Memproses...');
+      LoadingHelper.show(
+        context,
+        message: t.translate('saving', fallback: 'Memproses...'),
+      );
       await AuthHelper.setBiometricEnabled(false);
       if (mounted) {
         LoadingHelper.hide(context);
@@ -219,7 +318,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (value) {
       if (currentUser == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t.translate('login_first_cloud')), backgroundColor: Colors.orange),
+          SnackBar(
+            content: Text(t.translate('login_first_cloud')),
+            backgroundColor: Colors.orange,
+          ),
         );
         Navigator.push(
           context,
@@ -233,63 +335,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return;
       }
 
-      LoadingHelper.show(context, message: t.translate('cloud_syncing') ?? 'Sinkronisasi data ke Cloud...');
+      LoadingHelper.show(
+        context,
+        message: t.translate(
+          'cloud_syncing',
+          fallback: 'Sinkronisasi data ke Cloud...',
+        ),
+      );
 
       try {
-        final dbHelper = DatabaseHelper.instance;
-        await dbHelper.pullDataFromCloud();
-        await FirestoreService().initializeUserDataOnFirstLaunch();
-
-        final localCategories = await dbHelper.getCategories(); 
-        final localTransactions = await dbHelper.getTransactions(); 
-        final localBudgets = await dbHelper.getBudgets(); 
-
-        final firestore = FirebaseFirestore.instance;
-        final userId = currentUser.uid;
-
-        await firestore.collection('users').doc(userId).set({
-          'user_id': userId,
-          'email': currentUser.email,
-          'name': _nameController.text.trim(),
-          'profile_image': _profileImagePath ?? '',
-          'app_logo': _appLogoPath ?? '',
-          'updated_at': FieldValue.serverTimestamp(),
-        }, SetOptions(merge: true));
-
-        for (var cat in localCategories) {
-          final String catDocId = '${userId}_cat_${cat.id ?? cat.name.hashCode}';
-          await firestore.collection('categories').doc(catDocId).set({
-            'user_id': userId,
-            'name': cat.name,
-            'type': cat.type.name, 
-          }, SetOptions(merge: true));
-        }
-
-        for (var tx in localTransactions) {
-          final String txDocId = '${userId}_tx_${tx.id}';
-          await firestore.collection('transactions').doc(txDocId).set({
-            'user_id': userId,
-            'title': tx.title,
-            'amount': tx.amount,
-            'date': tx.date,
-            'category_id': tx.categoryId,
-            'item_id': tx.itemId,
-            'note': tx.note,
-            'updated_at': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
-        }
-
-        for (var budget in localBudgets) {
-          final String budgetDocId = '${userId}_cat${budget.categoryId}_${budget.year}_${budget.month}';
-          await firestore.collection('budgets').doc(budgetDocId).set({
-            'user_id': userId,
-            'category_id': budget.categoryId,
-            'month': budget.month,
-            'year': budget.year,
-            'amount': budget.amount,
-            'updated_at': FieldValue.serverTimestamp(),
-          }, SetOptions(merge: true));
-        }
+        await LocalSync.setEnabled(true);
+        await DatabaseHelper.instance.pullDataFromCloud();
+        await _persistProfile();
 
         if (mounted) {
           setState(() {
@@ -300,12 +357,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(t.translate('cloud_active_success')), backgroundColor: Colors.green),
+          SnackBar(
+            content: Text(t.translate('cloud_active_success')),
+            backgroundColor: Colors.green,
+          ),
         );
       } catch (e) {
+        await _checkCloudSyncStatus();
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${t.translate('cloud_sync_failed')}: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('${t.translate('cloud_sync_failed')}: $e'),
+            backgroundColor: Colors.red,
+          ),
         );
       } finally {
         if (mounted) {
@@ -313,6 +377,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       }
     } else {
+      await LocalSync.setEnabled(false);
+      if (!mounted) return;
       setState(() => _isCloudSyncActive = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(t.translate('offline_mode_switched'))),
@@ -333,23 +399,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const CircleAvatar(
               radius: 36,
               backgroundColor: Color(0xFF1A237E),
-              child: Icon(Icons.account_balance_wallet, size: 40, color: Colors.white),
+              child: Icon(
+                Icons.account_balance_wallet,
+                size: 40,
+                color: Colors.white,
+              ),
             ),
             const SizedBox(height: 16),
             Text(
-              t.translate('app_title') ?? 'Dompet Harian Dukeduk',
+              t.translate('app_title', fallback: 'Dompet Harian Dukeduk'),
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 4),
             const Text(
-              'Version 1.0.0',
+              'Version 1.0.1',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 12),
             Text(
-              isEn 
-                  ? 'A simple and secure daily finance & business ledger application with cloud synchronization support.' 
+              isEn
+                  ? 'A simple and secure daily finance & business ledger application with cloud synchronization support.'
                   : 'Aplikasi pencatatan keuangan harian & bisnis yang simpel dan aman dengan dukungan sinkronisasi cloud.',
               style: TextStyle(fontSize: 13, color: Colors.grey.shade700),
               textAlign: TextAlign.center,
@@ -363,8 +433,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const Icon(Icons.code, size: 16, color: Colors.grey),
                 const SizedBox(width: 6),
                 Text(
-                  isEn ? 'Developed by Ronald Yonatan' : 'Dibuat oleh Ronald Yonatan',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                  isEn
+                      ? 'Developed by Ronald Yonatan'
+                      : 'Dibuat oleh Ronald Yonatan',
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ],
             ),
@@ -383,10 +458,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 backgroundColor: const Color(0xFF1A237E),
                 foregroundColor: Colors.white,
                 minimumSize: const Size(120, 36),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               onPressed: () => Navigator.pop(context),
-              child: Text(t.translate('close') ?? 'Tutup'),
+              child: Text(t.translate('close', fallback: 'Tutup')),
             ),
           ),
         ],
@@ -399,7 +476,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Text(
             t.translate('confirm_logout'),
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -411,20 +490,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text(t.translate('close'), style: const TextStyle(color: Colors.grey)),
+              child: Text(
+                t.translate('close'),
+                style: const TextStyle(color: Colors.grey),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade700,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               onPressed: () async {
-                Navigator.pop(context); 
-                LoadingHelper.show(context, message: t.translate('logging_out') ?? 'Keluar sesi...');
-                
+                Navigator.pop(context);
+                LoadingHelper.show(
+                  context,
+                  message: t.translate(
+                    'logging_out',
+                    fallback: 'Keluar sesi...',
+                  ),
+                );
+
                 // Logout langsung dari Firebase Authentication
-                await FirebaseAuth.instance.signOut();
+                await AuthHelper.logout();
 
                 if (!mounted) return;
                 LoadingHelper.hide(context);
@@ -455,7 +545,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF1F5F9),
       appBar: AppBar(
-        title: Text(t.translate('profile_settings'), style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+        title: Text(
+          t.translate('profile_settings'),
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
         backgroundColor: const Color(0xFF1A237E),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -465,12 +558,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.notifications_active),
+                title: const Text('Uji notifikasi pengingat'),
+                subtitle: const Text(
+                  'Izinkan notifikasi dan kirim contoh notifikasi ke ponsel ini.',
+                ),
+                onTap: () async {
+                  try {
+                    await NotificationHelper.requestPermission();
+                    await DatabaseHelper.instance.refreshReminders();
+                    await NotificationHelper.showTestNotification();
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context)
+                          .showSnackBar(SnackBar(content: Text('$e')));
+                    }
+                  }
+                },
+              ),
+            ),
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 3))],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: Column(
                 children: [
@@ -479,18 +599,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       Column(
                         children: [
-                          const Text('Foto Profil', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+                          const Text(
+                            'Foto Profil',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
+                            ),
+                          ),
                           const SizedBox(height: 6),
                           Stack(
                             children: [
                               CircleAvatar(
                                 radius: 35,
                                 backgroundColor: Colors.indigo.shade50,
-                                backgroundImage: _profileImagePath != null && _profileImagePath!.isNotEmpty
-                                    ? (kIsWeb ? NetworkImage(_profileImagePath!) : FileImage(File(_profileImagePath!)) as ImageProvider)
-                                    : null,
-                                child: _profileImagePath == null || _profileImagePath!.isEmpty
-                                    ? const Icon(Icons.person_rounded, size: 35, color: Color(0xFF1A237E))
+                                backgroundImage: profileImage(
+                                  _profileImagePath,
+                                ),
+                                child:
+                                    _profileImagePath == null ||
+                                        _profileImagePath!.isEmpty
+                                    ? const Icon(
+                                        Icons.person_rounded,
+                                        size: 35,
+                                        color: Color(0xFF1A237E),
+                                      )
                                     : null,
                               ),
                               Positioned(
@@ -500,8 +633,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   onTap: () => _pickImage(true),
                                   child: Container(
                                     padding: const EdgeInsets.all(5),
-                                    decoration: const BoxDecoration(color: Color(0xFF1A237E), shape: BoxShape.circle),
-                                    child: const Icon(Icons.camera_alt_rounded, size: 14, color: Colors.white),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF1A237E),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.camera_alt_rounded,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -512,18 +652,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(width: 30),
                       Column(
                         children: [
-                          const Text('Logo PT / Instansi', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
+                          const Text(
+                            'Logo PT / Instansi',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey,
+                            ),
+                          ),
                           const SizedBox(height: 6),
                           Stack(
                             children: [
                               CircleAvatar(
                                 radius: 35,
                                 backgroundColor: Colors.blue.shade50,
-                                backgroundImage: _appLogoPath != null && _appLogoPath!.isNotEmpty
-                                    ? (kIsWeb ? NetworkImage(_appLogoPath!) : FileImage(File(_appLogoPath!)) as ImageProvider)
-                                    : null,
-                                child: _appLogoPath == null || _appLogoPath!.isEmpty
-                                    ? const Icon(Icons.business_rounded, size: 35, color: Colors.blueAccent)
+                                backgroundImage: profileImage(_appLogoPath),
+                                child:
+                                    _appLogoPath == null ||
+                                        _appLogoPath!.isEmpty
+                                    ? const Icon(
+                                        Icons.business_rounded,
+                                        size: 35,
+                                        color: Colors.blueAccent,
+                                      )
                                     : null,
                               ),
                               Positioned(
@@ -533,8 +684,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   onTap: () => _pickImage(false),
                                   child: Container(
                                     padding: const EdgeInsets.all(5),
-                                    decoration: const BoxDecoration(color: Colors.blueAccent, shape: BoxShape.circle),
-                                    child: const Icon(Icons.camera_alt_rounded, size: 14, color: Colors.white),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.blueAccent,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.camera_alt_rounded,
+                                      size: 14,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -546,7 +704,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.grey.shade100,
                       borderRadius: BorderRadius.circular(8),
@@ -554,11 +715,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.email_outlined, size: 14, color: Colors.grey),
+                        const Icon(
+                          Icons.email_outlined,
+                          size: 14,
+                          color: Colors.grey,
+                        ),
                         const SizedBox(width: 6),
                         Text(
                           _userEmail ?? 'Memuat email...',
-                          style: const TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
                       ],
                     ),
@@ -569,7 +738,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     decoration: InputDecoration(
                       labelText: t.translate('full_name'),
                       isDense: true,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     onSubmitted: (_) => _saveName(),
                   ),
@@ -577,9 +748,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1A237E), foregroundColor: Colors.white),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1A237E),
+                        foregroundColor: Colors.white,
+                      ),
                       onPressed: _saveName,
-                      child: Text(t.translate('save_name'), style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      child: Text(
+                        t.translate('save_name'),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -591,16 +771,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 3))],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: SwitchListTile(
                 secondary: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.blue.shade50, shape: BoxShape.circle),
-                  child: const Icon(Icons.cloud_sync_rounded, color: Colors.blue, size: 22),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.cloud_sync_rounded,
+                    color: Colors.blue,
+                    size: 22,
+                  ),
                 ),
-                title: Text(t.translate('cloud_mode'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
-                subtitle: Text(t.translate('cloud_desc'), style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                title: Text(
+                  t.translate('cloud_mode'),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                subtitle: Text(
+                  t.translate('cloud_desc'),
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
                 value: _isCloudSyncActive,
                 onChanged: _toggleCloudSync,
               ),
@@ -611,16 +814,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 3))],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: SwitchListTile(
                 secondary: Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: Colors.indigo.shade50, shape: BoxShape.circle),
-                  child: const Icon(Icons.fingerprint_rounded, color: Color(0xFF1A237E), size: 22),
+                  decoration: BoxDecoration(
+                    color: Colors.indigo.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.fingerprint_rounded,
+                    color: Color(0xFF1A237E),
+                    size: 22,
+                  ),
                 ),
-                title: Text(t.translate('biometric_title'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
-                subtitle: Text(t.translate('biometric_desc'), style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                title: Text(
+                  t.translate('biometric_title'),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                subtitle: Text(
+                  t.translate('biometric_desc'),
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
                 value: _isBiometricActive,
                 onChanged: _toggleBiometric,
               ),
@@ -631,18 +857,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 3))],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(t.translate('language'), style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))),
+                  Text(
+                    t.translate('language'),
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       Expanded(
                         child: RadioListTile<String>(
-                          title: const Text('Bahasa Indonesia', style: TextStyle(fontSize: 13)),
+                          title: const Text(
+                            'Bahasa Indonesia',
+                            style: TextStyle(fontSize: 13),
+                          ),
                           value: 'id',
                           groupValue: widget.currentLanguage,
                           onChanged: (val) {
@@ -652,7 +894,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       Expanded(
                         child: RadioListTile<String>(
-                          title: const Text('English', style: TextStyle(fontSize: 13)),
+                          title: const Text(
+                            'English',
+                            style: TextStyle(fontSize: 13),
+                          ),
                           value: 'en',
                           groupValue: widget.currentLanguage,
                           onChanged: (val) {
@@ -670,22 +915,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 3))],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 4,
+                ),
                 leading: Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: Colors.red.shade50, shape: BoxShape.circle),
-                  child: const Icon(Icons.favorite_rounded, color: Colors.redAccent, size: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.favorite_rounded,
+                    color: Colors.redAccent,
+                    size: 20,
+                  ),
                 ),
-                title: Text(t.translate('donate_menu'), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A))),
-                subtitle: Text(t.translate('donate_desc'), style: const TextStyle(fontSize: 11, color: Colors.grey)),
-                trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                title: Text(
+                  t.translate('donate_menu'),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                subtitle: Text(
+                  t.translate('donate_desc'),
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
+                ),
+                trailing: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.grey,
+                ),
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => DonateScreen(languageCode: widget.currentLanguage)),
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          DonateScreen(languageCode: widget.currentLanguage),
+                    ),
                   );
                 },
               ),
@@ -695,24 +972,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 8, offset: const Offset(0, 3))],
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.02),
+                    blurRadius: 8,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
               child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 4,
+                ),
                 leading: Container(
                   padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: Colors.blue.shade50, shape: BoxShape.circle),
-                  child: const Icon(Icons.info_outline_rounded, color: Colors.blue, size: 20),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.info_outline_rounded,
+                    color: Colors.blue,
+                    size: 20,
+                  ),
                 ),
                 title: Text(
-                  isEn ? 'App Information' : 'Informasi Aplikasi', 
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF0F172A)),
+                  isEn ? 'App Information' : 'Informasi Aplikasi',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: Color(0xFF0F172A),
+                  ),
                 ),
                 subtitle: Text(
-                  isEn ? 'Version, developer, & details' : 'Versi, pengembang, & detail', 
+                  isEn
+                      ? 'Version, developer, & details'
+                      : 'Versi, pengembang, & detail',
                   style: const TextStyle(fontSize: 11, color: Colors.grey),
                 ),
-                trailing: const Icon(Icons.chevron_right_rounded, color: Colors.grey),
+                trailing: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.grey,
+                ),
                 onTap: () => _showAppInfoDialog(context, t),
               ),
             ),
@@ -723,11 +1025,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 foregroundColor: Colors.red.shade700,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
               ),
               onPressed: () => _confirmLogout(context, t),
               icon: const Icon(Icons.logout_rounded),
-              label: Text(t.translate('logout'), style: const TextStyle(fontWeight: FontWeight.bold)),
+              label: Text(
+                t.translate('logout'),
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ],
         ),

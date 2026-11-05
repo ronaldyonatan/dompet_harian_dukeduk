@@ -41,18 +41,17 @@ class AppLocalizations {
       'cloud_active_success': 'Mode Cloud aktif & data berhasil disinkronkan!',
       'cloud_sync_failed': 'Gagal sinkronisasi ke cloud',
       'offline_mode_switched': 'Beralih kembali ke Mode Offline Lokal.',
-      'login_first_cloud': 'Silakan login terlebih dahulu untuk menggunakan Mode Cloud!',      
-      'monthly_comparison': 'Komparasi Bulanan',      
+      'login_first_cloud':
+          'Silakan login terlebih dahulu untuk menggunakan Mode Cloud!',
+      'monthly_comparison': 'Komparasi Bulanan',
       'save_transaction': 'Simpan Transaksi',
-
-
 
       // Login Screen
       'login_title': 'Masuk ke Dompet',
       'login_subtitle': 'Kelola keuangan harian & bisnis dengan mudah',
       'name_hint': 'Masukkan Nama Anda',
       'login_btn': 'Mulai Masuk',
-      'income_legend' : 'Pemasukan',
+      'income_legend': 'Pemasukan',
       'expense_legend': 'Pengeluaran',
       'deficit_legend': 'Defisit',
 
@@ -140,8 +139,9 @@ class AppLocalizations {
       'no_usage': 'Tidak aAda Pemakaian',
       'no_revenue': 'Tidak aAda Pendapatan',
       'delete_budget_title': 'Hapus Budget',
-      'delete_budget_confirmation': 'Apakah anda yakin ingin menghapus Budget ini?',
-      
+      'delete_budget_confirmation':
+          'Apakah anda yakin ingin menghapus Budget ini?',
+
       'debt_receivable': 'Hutang & Piutang',
       'debts': 'Hutang',
       'receivables': 'Piutang',
@@ -160,8 +160,10 @@ class AppLocalizations {
       'realize': 'Realisasi',
       'realized': 'Teralisasi',
       'pending': 'Belum Teralisasi',
-      'realize_debt_desc': 'Ini akan otomatis membuat transaksi pemasukan sebesar',
-      'realize_receivable_desc': 'Ini akan otomatis membuat transaksi pengeluaran sebesar',
+      'realize_debt_desc':
+          'Ini akan otomatis membuat transaksi pemasukan sebesar',
+      'realize_receivable_desc':
+          'Ini akan otomatis membuat transaksi pengeluaran sebesar',
       'select_item_optional': 'Pilih Item (Opsional)',
       'no_debts': 'Belum ada data hutang.',
       'no_receivables': 'Belum ada data piutang.',
@@ -185,7 +187,7 @@ class AppLocalizations {
       'customer_saved_success': 'Pelanggan berhasil disimpan!',
       'delete_customer_title': 'Hapus Pelanggan',
       'delete_customer_confirm': 'Yakin ingin menghapus pelanggan ini?',
-      'no_customer_found': 'Belum ada data pelanggan.',      
+      'no_customer_found': 'Belum ada data pelanggan.',
       'master_lender': 'Master Pemberi Pinjaman',
       'master_lender_subtitle': 'Kelola daftar kreditur & hutang',
       'add_lender': 'Tambah Pemberi Pinjaman Baru',
@@ -195,7 +197,7 @@ class AppLocalizations {
       'lender_saved_success': 'Pemberi pinjaman berhasil disimpan!',
       'delete_lender_title': 'Hapus Pemberi Pinjaman',
       'delete_lender_confirm': 'Yakin ingin menghapus pemberi pinjaman ini?',
-      'no_lender_found': 'Belum ada data pemberi pinjaman.',      
+      'no_lender_found': 'Belum ada data pemberi pinjaman.',
 
       'name_cannot_be_empty': 'Nama tidak boleh kosong',
       'saving': 'Menyimpan...',
@@ -204,7 +206,6 @@ class AppLocalizations {
       'lender_deleted_success': 'Pemberi pinjaman berhasil dihapus!',
       'edit_customer': 'Edit Pelanggan',
       'edit_lender': 'Edit Pemberi Pinjaman',
-
     },
     'en': {
       // General / Navigation
@@ -244,18 +245,17 @@ class AppLocalizations {
       'cloud_active_success': 'Cloud Mode active & data synced successfully!',
       'cloud_sync_failed': 'Failed to sync to cloud',
       'offline_mode_switched': 'Switched back to Local Offline Mode.',
-      'login_first_cloud': 'Please login first to use Cloud Mode!',      
-      'monthly_comparison': 'Monthly Comparison',      
+      'login_first_cloud': 'Please login first to use Cloud Mode!',
+      'monthly_comparison': 'Monthly Comparison',
       'save_transaction': 'Save Transaction',
       // Login Screen
       'login_title': 'Login to Wallet',
       'login_subtitle': 'Manage daily finance & business easily',
       'name_hint': 'Enter Your Name',
       'login_btn': 'Get Started',
-      'income_legend' : 'Income',
+      'income_legend': 'Income',
       'expense_legend': 'Expense',
       'deficit_legend': 'Deficit',
-
 
       // Dashboard
       'balance': 'Wallet Balance',
@@ -281,7 +281,8 @@ class AppLocalizations {
       'active_period': 'Active Period',
       'no_mutation_filter': 'No mutations match this filter',
       'delete_transaction_title': 'Delete Transaction',
-      'delete_transaction_confirm': 'Are you sure you want to delete transaction',
+      'delete_transaction_confirm':
+          'Are you sure you want to delete transaction',
       'transaction_deleted_success': 'Transaction successfully deleted',
       'transaction_detail': 'Transaction Detail',
       'item_title': 'Item / Title',
@@ -342,7 +343,7 @@ class AppLocalizations {
       'no_revenue': 'No Revenue',
       'delete_budget_title': 'Delete Budget',
       'delete_budget_confirmation': 'Are you sure want to delete this budget?',
-      
+
       'debt_receivable': 'Debt & Receivable',
       'debts': 'Debts',
       'receivables': 'Receivables',
@@ -361,8 +362,10 @@ class AppLocalizations {
       'realize': 'Realize',
       'realized': 'Realized',
       'pending': 'Pending',
-      'realize_debt_desc': 'This will automatically create an income transaction of',
-      'realize_receivable_desc': 'This will automatically create an expense transaction of',
+      'realize_debt_desc':
+          'This will automatically create an income transaction of',
+      'realize_receivable_desc':
+          'This will automatically create an expense transaction of',
       'select_item_optional': 'Select Item (Optional)',
       'no_debts': 'No debt records found.',
       'no_receivables': 'No receivable records found.',
@@ -386,7 +389,7 @@ class AppLocalizations {
       'customer_saved_success': 'Customer saved successfully!',
       'delete_customer_title': 'Delete Customer',
       'delete_customer_confirm': 'Are you sure want to delete this customer?',
-      'no_customer_found': 'No customer records found.',      
+      'no_customer_found': 'No customer records found.',
 
       'master_lender': 'Master Lender',
       'master_lender_subtitle': 'Manage creditors & debts list',
@@ -397,7 +400,7 @@ class AppLocalizations {
       'lender_saved_success': 'Lender saved successfully!',
       'delete_lender_title': 'Delete Lender',
       'delete_lender_confirm': 'Are you sure want to delete this lender?',
-      'no_lender_found': 'No lender records found.',      
+      'no_lender_found': 'No lender records found.',
       'name_cannot_be_empty': 'Name cannot be empty',
       'saving': 'Saving...',
       'deleting': 'Deleting...',
@@ -408,7 +411,10 @@ class AppLocalizations {
     },
   };
 
-  String translate(String key) {
-    return _localizedValues[languageCode]?[key] ?? _localizedValues['id']![key] ?? key;
+  String translate(String key, {String? fallback}) {
+    return _localizedValues[languageCode]?[key] ??
+        _localizedValues['id']![key] ??
+        fallback ??
+        key;
   }
 }

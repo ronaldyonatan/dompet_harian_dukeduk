@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+    <key>NSCameraUsageDescription</key>
+    <string>Kamera digunakan untuk memindai barcode barang.</string>
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Galeri digunakan untuk memilih foto profil dan logo.</string>
+    <key>NSFaceIDUsageDescription</key>
+    <string>Verifikasi identitas untuk melindungi data keuangan Anda.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>

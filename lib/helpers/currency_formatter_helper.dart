@@ -11,7 +11,9 @@ String formatCurrency(num amount) {
 class CurrencyInputFormatter extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
     if (newValue.text.isEmpty) {
       return newValue.copyWith(text: '');
     }
@@ -22,7 +24,8 @@ class CurrencyInputFormatter extends TextInputFormatter {
       return newValue.copyWith(text: '');
     }
 
-    final parsedValue = int.parse(cleanText);
+    final parsedValue = int.tryParse(cleanText);
+    if (parsedValue == null) return oldValue;
     final formatter = NumberFormat('#,###', 'id_ID');
     String formatted = formatter.format(parsedValue);
 

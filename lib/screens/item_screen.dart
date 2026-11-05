@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+
 import '../helpers/database_helper.dart';
 import '../models/finance_model.dart' as model;
-import '../helpers/loading_helper.dart';
+import '../helpers/Loading_Helper.dart';
 import '../constants/app_icons.dart';
 
 class ItemScreen extends StatefulWidget {
@@ -48,13 +49,15 @@ class _ItemScreenState extends State<ItemScreen> {
   Future<void> _fetchDataLogic() async {
     final its = await DatabaseHelper.instance.getItems();
     final cats = await DatabaseHelper.instance.getCategories();
-    
+
     if (mounted) {
       setState(() {
         _items = its.where((i) => i.isActive).toList();
         _categories = cats.where((c) => c.isActive).toList();
-        
-        if (_categories.isNotEmpty && (_selectedCategory == null || !_categories.contains(_selectedCategory))) {
+
+        if (_categories.isNotEmpty &&
+            (_selectedCategory == null ||
+                !_categories.contains(_selectedCategory))) {
           _selectedCategory = _categories.first;
         }
       });
@@ -94,18 +97,23 @@ class _ItemScreenState extends State<ItemScreen> {
                   const SizedBox(height: 16),
                   Text(
                     isEn ? 'Select Item Icon' : 'Pilih Ikon Item',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF0F172A)),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Expanded(
                     child: GridView.builder(
                       controller: scrollController,
-                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                        crossAxisCount: 4,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: 1.0,
-                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 4,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 1.0,
+                          ),
                       itemCount: AppIcons.availableIcons.length,
                       itemBuilder: (context, index) {
                         final item = AppIcons.availableIcons[index];
@@ -123,7 +131,9 @@ class _ItemScreenState extends State<ItemScreen> {
                             decoration: BoxDecoration(
                               color: tColor['bg'],
                               border: Border.all(
-                                color: isSelected ? tColor['fg']! : tColor['fg']!.withOpacity(0.5),
+                                color: isSelected
+                                    ? tColor['fg']!
+                                    : tColor['fg']!.withValues(alpha: 0.5),
                                 width: isSelected ? 2.5 : 1.2,
                               ),
                               borderRadius: BorderRadius.circular(12),
@@ -142,7 +152,9 @@ class _ItemScreenState extends State<ItemScreen> {
                                   style: TextStyle(
                                     fontSize: 10,
                                     color: tColor['fg'],
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.w500,
                                   ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -168,31 +180,41 @@ class _ItemScreenState extends State<ItemScreen> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: Text(
-            isEn ? 'Hide Item' : 'Sembunyikan Item', 
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)
+            isEn ? 'Hide Item' : 'Sembunyikan Item',
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
           ),
           content: Text(
-            isEn 
-              ? 'Item "${item.name}" will be hidden from choices, but past transaction history using this item will remain safe and tracked.'
-              : 'Item "${item.name}" akan disembunyikan dari pilihan, namun riwayat transaksi masa lalu yang menggunakan item ini akan tetap aman dan terdeteksi.',
+            isEn
+                ? 'Item "${item.name}" will be hidden from choices, but past transaction history using this item will remain safe and tracked.'
+                : 'Item "${item.name}" akan disembunyikan dari pilihan, namun riwayat transaksi masa lalu yang menggunakan item ini akan tetap aman dan terdeteksi.',
             style: const TextStyle(fontSize: 13, color: Color(0xFF475569)),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text(isEn ? 'Cancel' : 'Batal', style: const TextStyle(color: Colors.grey)),
+              child: Text(
+                isEn ? 'Cancel' : 'Batal',
+                style: const TextStyle(color: Colors.grey),
+              ),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red.shade700,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               onPressed: () async {
                 Navigator.pop(context);
-                LoadingHelper.show(context, message: isEn ? 'Hiding item...' : 'Menyembunyikan item...');
+                LoadingHelper.show(
+                  context,
+                  message: isEn ? 'Hiding item...' : 'Menyembunyikan item...',
+                );
 
                 await DatabaseHelper.instance.softDeleteItem(item.id!);
                 await _fetchDataLogic();
@@ -202,8 +224,12 @@ class _ItemScreenState extends State<ItemScreen> {
 
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(isEn ? 'Item hidden successfully.' : 'Item berhasil disembunyikan.'), 
-                    backgroundColor: Colors.green
+                    content: Text(
+                      isEn
+                          ? 'Item hidden successfully.'
+                          : 'Item berhasil disembunyikan.',
+                    ),
+                    backgroundColor: Colors.green,
                   ),
                 );
               },
@@ -221,7 +247,8 @@ class _ItemScreenState extends State<ItemScreen> {
 
     final filteredItems = _items.where((item) {
       return item.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          (item.barcode != null && item.barcode!.toLowerCase().contains(_searchQuery.toLowerCase()));
+          (item.barcode != null &&
+              item.barcode!.toLowerCase().contains(_searchQuery.toLowerCase()));
     }).toList();
 
     final currentSelectedData = AppIcons.availableIcons.firstWhere(
@@ -234,15 +261,17 @@ class _ItemScreenState extends State<ItemScreen> {
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Text(
-          isEn ? 'Manage Master Items' : 'Kelola Master Item', 
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)
+          isEn ? 'Manage Master Items' : 'Kelola Master Item',
+          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF1A237E),
         foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF1A237E)))
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF1A237E)),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -253,38 +282,65 @@ class _ItemScreenState extends State<ItemScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(16),
-                      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 8, offset: const Offset(0, 2))],
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.03),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          isEn ? 'Add New Item & Link Category' : 'Tambah Item Baru & Hubungkan Kategori', 
-                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))
+                          isEn
+                              ? 'Add New Item & Link Category'
+                              : 'Tambah Item Baru & Hubungkan Kategori',
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF0F172A),
+                          ),
                         ),
                         const SizedBox(height: 12),
                         TextField(
                           controller: _itemNameController,
                           decoration: InputDecoration(
-                            labelText: isEn ? 'Item Name (Ex: Coffee / Salary)' : 'Nama Item (Cth: Kopi Susu / Gaji Pokok)',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            labelText: isEn
+                                ? 'Item Name (Ex: Coffee / Salary)'
+                                : 'Nama Item (Cth: Kopi Susu / Gaji Pokok)',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             filled: true,
                             fillColor: Colors.grey.shade50,
                           ),
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<model.Category>(
-                          value: _selectedCategory,
+                          initialValue: _selectedCategory,
                           decoration: InputDecoration(
-                            labelText: isEn ? 'Select Category (Bridge)' : 'Pilih Kategori (Bridge)',
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                            labelText: isEn
+                                ? 'Select Category (Bridge)'
+                                : 'Pilih Kategori (Bridge)',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                             filled: true,
                             fillColor: Colors.grey.shade50,
                           ),
                           items: _categories.map((cat) {
-                            return DropdownMenuItem(value: cat, child: Text(cat.name, style: const TextStyle(fontSize: 13)));
+                            return DropdownMenuItem(
+                              value: cat,
+                              child: Text(
+                                cat.name,
+                                style: const TextStyle(fontSize: 13),
+                              ),
+                            );
                           }).toList(),
-                          onChanged: (val) => setState(() => _selectedCategory = val),
+                          onChanged: (val) =>
+                              setState(() => _selectedCategory = val),
                         ),
                         const SizedBox(height: 12),
 
@@ -294,7 +350,9 @@ class _ItemScreenState extends State<ItemScreen> {
                           child: InputDecorator(
                             decoration: InputDecoration(
                               labelText: isEn ? 'Item Icon' : 'Ikon Item',
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                               filled: true,
                               fillColor: Colors.grey.shade50,
                             ),
@@ -309,13 +367,23 @@ class _ItemScreenState extends State<ItemScreen> {
                                         color: currentThemeColor['bg'],
                                         borderRadius: BorderRadius.circular(8),
                                       ),
-                                      child: Icon(currentSelectedData['icon'], color: currentThemeColor['fg'], size: 20),
+                                      child: Icon(
+                                        currentSelectedData['icon'],
+                                        color: currentThemeColor['fg'],
+                                        size: 20,
+                                      ),
                                     ),
                                     const SizedBox(width: 12),
-                                    Text(currentSelectedData['label'], style: const TextStyle(fontSize: 14)),
+                                    Text(
+                                      currentSelectedData['label'],
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
                                   ],
                                 ),
-                                const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                                const Icon(
+                                  Icons.arrow_drop_down,
+                                  color: Colors.grey,
+                                ),
                               ],
                             ),
                           ),
@@ -327,21 +395,31 @@ class _ItemScreenState extends State<ItemScreen> {
                             backgroundColor: const Color(0xFF1A237E),
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
                           onPressed: () async {
                             final name = _itemNameController.text.trim();
-                            if (name.isEmpty || _selectedCategory == null) return;
+                            if (name.isEmpty || _selectedCategory == null)
+                              return;
 
-                            LoadingHelper.show(context, message: isEn ? 'Saving item...' : 'Menyimpan item...');
+                            LoadingHelper.show(
+                              context,
+                              message: isEn
+                                  ? 'Saving item...'
+                                  : 'Menyimpan item...',
+                            );
 
-                            await DatabaseHelper.instance.insertItem(model.ItemModel(
-                              name: name,
-                              categoryId: _selectedCategory!.id!,
-                              isActive: true,
-                              icon: _selectedIcon,
-                            ));
-                            
+                            await DatabaseHelper.instance.insertItem(
+                              model.ItemModel(
+                                name: name,
+                                categoryId: _selectedCategory!.id!,
+                                isActive: true,
+                                icon: _selectedIcon,
+                              ),
+                            );
+
                             _itemNameController.clear();
                             setState(() => _selectedIcon = 'shopping_bag');
                             await _fetchDataLogic();
@@ -351,24 +429,38 @@ class _ItemScreenState extends State<ItemScreen> {
 
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: Text(isEn ? 'Item saved successfully!' : 'Item berhasil disimpan!'), 
-                                backgroundColor: Colors.green
+                                content: Text(
+                                  isEn
+                                      ? 'Item saved successfully!'
+                                      : 'Item berhasil disimpan!',
+                                ),
+                                backgroundColor: Colors.green,
                               ),
                             );
                           },
-                          child: Text(isEn ? 'Save Item' : 'Simpan Item', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          child: Text(
+                            isEn ? 'Save Item' : 'Simpan Item',
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ],
                     ),
                   ),
                   const SizedBox(height: 20),
-                  
+
                   TextField(
                     controller: _searchController,
                     decoration: InputDecoration(
-                      labelText: isEn ? 'Search Item Name or Barcode...' : 'Cari Nama Item atau Barcode...',
-                      prefixIcon: const Icon(Icons.search, color: Color(0xFF1A237E)),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      labelText: isEn
+                          ? 'Search Item Name or Barcode...'
+                          : 'Cari Nama Item atau Barcode...',
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: Color(0xFF1A237E),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                       filled: true,
                       fillColor: Colors.white,
                       isDense: true,
@@ -393,18 +485,24 @@ class _ItemScreenState extends State<ItemScreen> {
                   const SizedBox(height: 16),
 
                   Text(
-                    isEn ? 'Connected Master Items' : 'Daftar Master Item Terhubung', 
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF0F172A))
+                    isEn
+                        ? 'Connected Master Items'
+                        : 'Daftar Master Item Terhubung',
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F172A),
+                    ),
                   ),
                   const SizedBox(height: 10),
-                  
+
                   filteredItems.isEmpty
                       ? Padding(
                           padding: const EdgeInsets.symmetric(vertical: 32.0),
                           child: Center(
                             child: Text(
-                              isEn ? 'No items found.' : 'Tiada item dijumpai.', 
-                              style: const TextStyle(color: Colors.grey)
+                              isEn ? 'No items found.' : 'Tiada item dijumpai.',
+                              style: const TextStyle(color: Colors.grey),
                             ),
                           ),
                         )
@@ -416,24 +514,38 @@ class _ItemScreenState extends State<ItemScreen> {
                             final item = filteredItems[index];
                             final cat = _categories.firstWhere(
                               (c) => c.id == item.categoryId,
-                              orElse: () => model.Category(id: 0, name: isEn ? 'General' : 'Umum', type: model.TransactionType.expense),
+                              orElse: () => model.Category(
+                                id: 0,
+                                name: isEn ? 'General' : 'Umum',
+                                type: model.TransactionType.expense,
+                              ),
                             );
-                            
-                            final themeColor = AppIcons.getIconThemeColor(item.icon);
+
+                            final themeColor = AppIcons.getIconThemeColor(
+                              item.icon,
+                            );
 
                             return Container(
                               margin: const EdgeInsets.only(bottom: 10),
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(color: Colors.grey.shade200),
                                 boxShadow: [
-                                  BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 6, offset: const Offset(0, 2)),
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.02),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
                                 ],
                               ),
                               child: Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
                                 children: [
                                   Expanded(
                                     child: Row(
@@ -442,27 +554,40 @@ class _ItemScreenState extends State<ItemScreen> {
                                           padding: const EdgeInsets.all(12),
                                           decoration: BoxDecoration(
                                             color: themeColor['bg'],
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius: BorderRadius.circular(
+                                              12,
+                                            ),
                                           ),
                                           child: Icon(
-                                            AppIcons.getIconData(item.icon), 
-                                            size: 24, 
+                                            AppIcons.getIconData(item.icon),
+                                            size: 24,
                                             color: themeColor['fg'],
                                           ),
                                         ),
                                         const SizedBox(width: 14),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                item.name, 
-                                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A))
+                                                item.name,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 15,
+                                                  color: Color(0xFF0F172A),
+                                                ),
                                               ),
                                               const SizedBox(height: 3),
                                               Text(
-                                                isEn ? 'Category: ${cat.name}' : 'Kategori: ${cat.name}', 
-                                                style: TextStyle(fontSize: 12, color: Colors.indigo.shade700, fontWeight: FontWeight.w500)
+                                                isEn
+                                                    ? 'Category: ${cat.name}'
+                                                    : 'Kategori: ${cat.name}',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  color: Colors.indigo.shade700,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
                                               ),
                                             ],
                                           ),
@@ -471,7 +596,11 @@ class _ItemScreenState extends State<ItemScreen> {
                                     ),
                                   ),
                                   IconButton(
-                                    icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent, size: 22),
+                                    icon: const Icon(
+                                      Icons.delete_outline_rounded,
+                                      color: Colors.redAccent,
+                                      size: 22,
+                                    ),
                                     onPressed: () => _confirmDeleteItem(item),
                                   ),
                                 ],

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../helpers/localization_helper.dart'; // <-- Gunakan helper lokalisasi yang sudah ada
 import 'item_screen.dart';
 import 'category_screen.dart';
@@ -8,10 +9,7 @@ import 'lender_screen.dart';
 class MasterDataHubScreen extends StatelessWidget {
   final String currentLanguage;
 
-  const MasterDataHubScreen({
-    super.key,
-    required this.currentLanguage,
-  });
+  const MasterDataHubScreen({super.key, required this.currentLanguage});
 
   @override
   Widget build(BuildContext context) {
@@ -23,8 +21,12 @@ class MasterDataHubScreen extends StatelessWidget {
         backgroundColor: const Color(0xFF1A237E),
         elevation: 0,
         title: Text(
-          localization.translate('master_data') ?? 'Master Data',
-          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          localization.translate('master_data', fallback: 'Master Data'),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -34,7 +36,10 @@ class MasterDataHubScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              localization.translate('select_master_data_module') ?? 'Pilih Modul Master Data',
+              localization.translate(
+                'select_master_data_module',
+                fallback: 'Pilih Modul Master Data',
+              ),
               style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -43,7 +48,10 @@ class MasterDataHubScreen extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              localization.translate('master_data_subtitle') ?? 'Kelola item dan kategori Anda di bawah',
+              localization.translate(
+                'master_data_subtitle',
+                fallback: 'Kelola item dan kategori Anda di bawah',
+              ),
               style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
             ),
             const SizedBox(height: 20),
@@ -57,15 +65,22 @@ class MasterDataHubScreen extends StatelessWidget {
                   // 1. Menu Master Item
                   _buildMenuCard(
                     context,
-                    title: localization.translate('master_item') ?? 'Master Item',
-                    subtitle: localization.translate('master_item_subtitle') ?? 'Kelola barang & barcode',
+                    title: localization.translate(
+                      'master_item',
+                      fallback: 'Master Item',
+                    ),
+                    subtitle: localization.translate(
+                      'master_item_subtitle',
+                      fallback: 'Kelola barang & barcode',
+                    ),
                     icon: Icons.inventory_2_rounded,
                     color: Colors.blue.shade700,
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => ItemScreen(currentLanguage: currentLanguage),
+                          builder: (context) =>
+                              ItemScreen(currentLanguage: currentLanguage),
                         ),
                       );
                     },
@@ -74,15 +89,22 @@ class MasterDataHubScreen extends StatelessWidget {
                   // 2. Menu Master Category
                   _buildMenuCard(
                     context,
-                    title: localization.translate('master_category') ?? 'Master Kategori',
-                    subtitle: localization.translate('master_category_subtitle') ?? 'Kelola tipe transaksi',
+                    title: localization.translate(
+                      'master_category',
+                      fallback: 'Master Kategori',
+                    ),
+                    subtitle: localization.translate(
+                      'master_category_subtitle',
+                      fallback: 'Kelola tipe transaksi',
+                    ),
                     icon: Icons.category_rounded,
                     color: Colors.purple.shade700,
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => CategoryScreen(currentLanguage: currentLanguage),
+                          builder: (context) =>
+                              CategoryScreen(currentLanguage: currentLanguage),
                         ),
                       );
                     },
@@ -92,18 +114,21 @@ class MasterDataHubScreen extends StatelessWidget {
                   _buildMenuCard(
                     context,
                     title: localization.translate('master_customer'),
-                    subtitle: localization.translate('master_customer_subtitle'),
+                    subtitle: localization.translate(
+                      'master_customer_subtitle',
+                    ),
                     icon: Icons.people_alt_rounded,
                     color: Colors.indigo.shade700,
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => CustomerScreen(currentLanguage: currentLanguage),
+                          builder: (context) =>
+                              CustomerScreen(currentLanguage: currentLanguage),
                         ),
                       );
                     },
-                  ),       
+                  ),
                   // 4. Menu Master Lender
                   _buildMenuCard(
                     context,
@@ -115,11 +140,12 @@ class MasterDataHubScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => LenderScreen(currentLanguage: currentLanguage),
+                          builder: (context) =>
+                              LenderScreen(currentLanguage: currentLanguage),
                         ),
                       );
                     },
-                  ),                             
+                  ),
                 ],
               ),
             ),
@@ -141,7 +167,7 @@ class MasterDataHubScreen extends StatelessWidget {
       color: Colors.white,
       borderRadius: BorderRadius.circular(20),
       elevation: 2,
-      shadowColor: Colors.black.withOpacity(0.05),
+      shadowColor: Colors.black.withValues(alpha: 0.05),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
@@ -154,7 +180,7 @@ class MasterDataHubScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: color, size: 28),
@@ -171,10 +197,7 @@ class MasterDataHubScreen extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey.shade500,
-                ),
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

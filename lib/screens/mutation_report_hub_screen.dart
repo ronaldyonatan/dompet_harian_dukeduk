@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import 'mutation_screen.dart';
 import 'report_screen.dart';
 
@@ -46,7 +47,8 @@ class MutationReportHubScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => MutationScreen(languageCode: languageCode),
+                    builder: (context) =>
+                        MutationScreen(languageCode: languageCode),
                   ),
                 );
               },
@@ -91,7 +93,7 @@ class MutationReportHubScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -112,7 +114,7 @@ class MutationReportHubScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.12),
+                    color: color.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(icon, color: color, size: 32),

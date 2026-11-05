@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../helpers/localization_helper.dart'; 
-import 'budget_screen.dart';
+
+import '../helpers/localization_helper.dart';
+import 'Budget_Screen.dart';
 import 'new_transaction_screen.dart'; // <-- Impor screen baru
 import 'debt_screen.dart';
 import 'receivable_screen.dart';
@@ -8,10 +9,7 @@ import 'receivable_screen.dart';
 class TransactionScreen extends StatelessWidget {
   final String languageCode;
 
-  const TransactionScreen({
-    super.key,
-    required this.languageCode,
-  });
+  const TransactionScreen({super.key, required this.languageCode});
 
   // Fungsi untuk membuka form New Transaction
   void _openNewTransaction(BuildContext context) {
@@ -34,7 +32,11 @@ class TransactionScreen extends StatelessWidget {
         elevation: 0,
         title: Text(
           localization.translate('transaction_menu'),
-          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -68,7 +70,9 @@ class TransactionScreen extends StatelessWidget {
                   _buildMenuCard(
                     context,
                     title: localization.translate('new_transaction'),
-                    subtitle: localization.translate('new_transaction_subtitle'),
+                    subtitle: localization.translate(
+                      'new_transaction_subtitle',
+                    ),
                     icon: Icons.add_card_rounded,
                     color: Colors.blue.shade700,
                     onTap: () => _openNewTransaction(context),
@@ -85,7 +89,8 @@ class TransactionScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => BudgetScreen(currentLanguage: languageCode),
+                          builder: (context) =>
+                              BudgetScreen(currentLanguage: languageCode),
                         ),
                       );
                     },
@@ -102,7 +107,8 @@ class TransactionScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => DebtScreen(currentLanguage: languageCode),
+                          builder: (context) =>
+                              DebtScreen(currentLanguage: languageCode),
                         ),
                       );
                     },
@@ -119,7 +125,8 @@ class TransactionScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => ReceivableScreen(currentLanguage: languageCode),
+                          builder: (context) =>
+                              ReceivableScreen(currentLanguage: languageCode),
                         ),
                       );
                     },
@@ -145,7 +152,7 @@ class TransactionScreen extends StatelessWidget {
       color: Colors.white,
       borderRadius: BorderRadius.circular(20),
       elevation: 2,
-      shadowColor: Colors.black.withOpacity(0.05),
+      shadowColor: Colors.black.withValues(alpha: 0.05),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
@@ -158,7 +165,7 @@ class TransactionScreen extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: color, size: 28),
@@ -175,10 +182,7 @@ class TransactionScreen extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 subtitle,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.grey.shade500,
-                ),
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),

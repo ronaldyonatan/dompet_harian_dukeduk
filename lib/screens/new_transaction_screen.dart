@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+
 import '../helpers/database_helper.dart';
 import '../models/finance_model.dart' as model;
 import '../helpers/localization_helper.dart';
@@ -9,10 +10,7 @@ import 'barcode_scanner_screen.dart';
 class NewTransactionScreen extends StatefulWidget {
   final String languageCode;
 
-  const NewTransactionScreen({
-    super.key,
-    required this.languageCode,
-  });
+  const NewTransactionScreen({super.key, required this.languageCode});
 
   @override
   State<NewTransactionScreen> createState() => _NewTransactionScreenState();
@@ -22,6 +20,7 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
   List<model.Category> _categories = [];
   List<model.ItemModel> _items = [];
   bool _isLoading = true;
+  bool _saving = false;
 
   final _amountController = TextEditingController();
   final _noteController = TextEditingController();
@@ -39,6 +38,14 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
     _loadDependencies();
   }
 
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _noteController.dispose();
+    _barcodeController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadDependencies() async {
     setState(() => _isLoading = true);
     final results = await Future.wait([
@@ -46,9 +53,16 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
       DatabaseHelper.instance.getItems(),
     ]);
 
+    if (!mounted) return;
     setState(() {
-      _categories = results[0] as List<model.Category>;
-      _items = results[1] as List<model.ItemModel>;
+      _categories = (results[0] as List<model.Category>)
+          .where((c) => c.isActive)
+          .toList();
+      _items = (results[1] as List<model.ItemModel>)
+          .where(
+            (i) => i.isActive && _categories.any((c) => c.id == i.categoryId),
+          )
+          .toList();
       if (_items.isNotEmpty) {
         _selectedItem = _items.first;
         _updateCategory(_selectedItem);
@@ -62,9 +76,13 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
     if (item != null) {
       _resolvedCategory = _categories.firstWhere(
         (c) => c.id == item.categoryId,
-        orElse: () => _categories.isNotEmpty 
-            ? _categories.first 
-            : model.Category(id: 0, name: '', type: model.TransactionType.expense),
+        orElse: () => _categories.isNotEmpty
+            ? _categories.first
+            : model.Category(
+                id: 0,
+                name: '',
+                type: model.TransactionType.expense,
+              ),
       );
     } else {
       _resolvedCategory = null;
@@ -91,7 +109,8 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
 
       if (filtered.isNotEmpty) {
         // Jika ketemu tepat 1 item ATAU item yang terpilih sebelumnya tidak ada di daftar filtered
-        if (filtered.length == 1 || !filtered.any((item) => item.id == _selectedItem?.id)) {
+        if (filtered.length == 1 ||
+            !filtered.any((item) => item.id == _selectedItem?.id)) {
           _selectedItem = filtered.first;
           _updateCategory(_selectedItem);
           _updateBarcodeFromItem(_selectedItem);
@@ -116,8 +135,9 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
       _scannedBarcode = scannedCode;
       _barcodeController.text = scannedCode;
 
-      model.ItemModel? foundItem = await DatabaseHelper.instance.getItemByBarcode(scannedCode);
-      
+      model.ItemModel? foundItem = await DatabaseHelper.instance
+          .getItemByBarcode(scannedCode);
+
       if (foundItem != null) {
         model.ItemModel matchedItem = _items.firstWhere(
           (item) => item.id == foundItem.id,
@@ -129,7 +149,9 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
           _updateCategory(matchedItem);
         });
 
-        final lastTx = await DatabaseHelper.instance.getLastTransactionByItem(matchedItem.id!);
+        final lastTx = await DatabaseHelper.instance.getLastTransactionByItem(
+          matchedItem.id!,
+        );
         if (lastTx != null) {
           _amountController.text = lastTx.amount.toStringAsFixed(0);
         } else if ((matchedItem.defaultPrice ?? 0) > 0) {
@@ -139,7 +161,9 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('${loc.translate('item_found')}: ${matchedItem.name}'), 
+              content: Text(
+                '${loc.translate('item_found')}: ${matchedItem.name}',
+              ),
               backgroundColor: Colors.green,
             ),
           );
@@ -158,14 +182,34 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
   }
 
   Future<void> _saveTransaction() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    try {
+      await _commitTransaction();
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menyimpan transaksi: $e')),
+        );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _commitTransaction() async {
     final loc = AppLocalizations(widget.languageCode);
     final cleanAmountText = _amountController.text.replaceAll('.', '');
     final amount = double.tryParse(cleanAmountText) ?? 0;
-    
+
     if (amount <= 0 || _selectedItem == null || _resolvedCategory == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(loc.translate('fill_all_fields') ?? 'Mohon isi nominal dan item dengan benar'), 
+          content: Text(
+            loc.translate(
+              'fill_all_fields',
+              fallback: 'Mohon isi nominal dan item dengan benar',
+            ),
+          ),
           backgroundColor: Colors.red,
         ),
       );
@@ -173,30 +217,43 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
     }
 
     if (_scannedBarcode != null && _scannedBarcode!.isNotEmpty) {
-      model.ItemModel? ownerItem = await DatabaseHelper.instance.getOwnerItemByBarcode(
-        _scannedBarcode!, 
-        excludeItemId: _selectedItem!.id
-      );
+      model.ItemModel? ownerItem = await DatabaseHelper.instance
+          .getOwnerItemByBarcode(
+            _scannedBarcode!,
+            excludeItemId: _selectedItem!.id,
+          );
 
       if (ownerItem != null && ownerItem.id != _selectedItem!.id) {
         if (!mounted) return;
         bool? confirmTransfer = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: Text(loc.translate('duplicate_barcode_warning'), style: const TextStyle(fontWeight: FontWeight.bold)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            title: Text(
+              loc.translate('duplicate_barcode_warning'),
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             content: Text(
-              loc.translate('duplicate_barcode_message')
+              loc
+                  .translate('duplicate_barcode_message')
                   .replaceFirst('{owner}', ownerItem.name)
                   .replaceFirst('{target}', _selectedItem!.name),
             ),
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: Text(loc.translate('cancel'), style: const TextStyle(color: Colors.grey)),
+                child: Text(
+                  loc.translate('cancel'),
+                  style: const TextStyle(color: Colors.grey),
+                ),
               ),
               ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.red.shade600, foregroundColor: Colors.white),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade600,
+                  foregroundColor: Colors.white,
+                ),
                 onPressed: () => Navigator.pop(context, true),
                 child: Text(loc.translate('yes_transfer')),
               ),
@@ -207,7 +264,10 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
         if (confirmTransfer != true) return;
       }
 
-      await DatabaseHelper.instance.updateItemBarcode(_selectedItem!.id!, _scannedBarcode!);
+      await DatabaseHelper.instance.updateItemBarcode(
+        _selectedItem!.id!,
+        _scannedBarcode!,
+      );
     }
 
     final newTx = model.TransactionModel(
@@ -216,7 +276,9 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
       date: _selectedDate.toIso8601String(),
       categoryId: _resolvedCategory!.id!,
       itemId: _selectedItem!.id,
-      note: _noteController.text.trim().isEmpty ? null : _noteController.text.trim(),
+      note: _noteController.text.trim().isEmpty
+          ? null
+          : _noteController.text.trim(),
     );
 
     await DatabaseHelper.instance.insertTransaction(newTx);
@@ -239,19 +301,28 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
         elevation: 0,
         title: Text(
           loc.translate('record_transaction_scan'),
-          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
-            icon: const Icon(Icons.qr_code_scanner_rounded, color: Colors.white),
+            icon: const Icon(
+              Icons.qr_code_scanner_rounded,
+              color: Colors.white,
+            ),
             tooltip: loc.translate('scan_barcode'),
             onPressed: _scanAndFillBarcode,
           ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF1A237E)))
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF1A237E)),
+            )
           : SingleChildScrollView(
               padding: const EdgeInsets.all(20.0),
               child: Column(
@@ -263,18 +334,28 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
                     decoration: InputDecoration(
                       labelText: loc.translate('barcode_id_readonly'),
                       hintText: loc.translate('no_barcode_scanned'),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       filled: true,
                       fillColor: Colors.white,
-                      prefixIcon: const Icon(Icons.qr_code, color: Color(0xFF1A237E)),
+                      prefixIcon: const Icon(
+                        Icons.qr_code,
+                        color: Color(0xFF1A237E),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
                     decoration: InputDecoration(
                       labelText: loc.translate('search_master_item'),
-                      prefixIcon: const Icon(Icons.search, color: Color(0xFF1A237E)),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: Color(0xFF1A237E),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       filled: true,
                       fillColor: Colors.white,
                       isDense: true,
@@ -283,19 +364,32 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
                   ),
                   const SizedBox(height: 14),
                   DropdownButtonFormField<model.ItemModel>(
-                    value: filteredItems.any((item) => item.id == _selectedItem?.id)
-                        ? filteredItems.firstWhere((item) => item.id == _selectedItem?.id)
+                    initialValue:
+                        filteredItems.any(
+                          (item) => item.id == _selectedItem?.id,
+                        )
+                        ? filteredItems.firstWhere(
+                            (item) => item.id == _selectedItem?.id,
+                          )
                         : null,
                     decoration: InputDecoration(
                       labelText: loc.translate('select_master_item'),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       filled: true,
                       fillColor: Colors.white,
                     ),
                     items: filteredItems.map((item) {
                       return DropdownMenuItem(
-                        value: item, 
-                        child: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                        value: item,
+                        child: Text(
+                          item.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
                       );
                     }).toList(),
                     onChanged: (newValue) {
@@ -308,7 +402,10 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
                   ),
                   const SizedBox(height: 14),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.indigo.shade50,
                       borderRadius: BorderRadius.circular(16),
@@ -318,12 +415,20 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          loc.translate('category_group'), 
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF3F51B5)),
+                          loc.translate('category_group'),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF3F51B5),
+                          ),
                         ),
                         Text(
-                          _resolvedCategory?.name ?? '-', 
-                          style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF1A237E)),
+                          _resolvedCategory?.name ?? '-',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF1A237E),
+                          ),
                         ),
                       ],
                     ),
@@ -347,14 +452,27 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
                     child: InputDecorator(
                       decoration: InputDecoration(
                         labelText: loc.translate('transaction_date'),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                         filled: true,
                         fillColor: Colors.white,
-                        suffixIcon: const Icon(Icons.calendar_today_rounded, size: 20, color: Color(0xFF1A237E)),
+                        suffixIcon: const Icon(
+                          Icons.calendar_today_rounded,
+                          size: 20,
+                          color: Color(0xFF1A237E),
+                        ),
                       ),
                       child: Text(
-                        DateFormat('dd MMMM yyyy', widget.languageCode == 'ms' ? 'ms_MY' : 'id_ID').format(_selectedDate),
-                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Color(0xFF0F172A)),
+                        DateFormat(
+                          'dd MMMM yyyy',
+                          widget.languageCode == 'ms' ? 'ms_MY' : 'id_ID',
+                        ).format(_selectedDate),
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF0F172A),
+                        ),
                       ),
                     ),
                   ),
@@ -364,7 +482,9 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
                     decoration: InputDecoration(
                       labelText: loc.translate('note_optional'),
                       hintText: loc.translate('note_hint'),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       filled: true,
                       fillColor: Colors.white,
                     ),
@@ -377,7 +497,9 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
                     decoration: InputDecoration(
                       labelText: loc.translate('nominal_amount'),
                       prefixText: 'Rp ',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       filled: true,
                       fillColor: Colors.white,
                     ),
@@ -389,12 +511,17 @@ class _NewTransactionScreenState extends State<NewTransactionScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF1A237E),
                         foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
-                      onPressed: _saveTransaction,
+                      onPressed: _saving ? null : _saveTransaction,
                       child: Text(
-                        loc.translate('save_transaction'), 
-                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        loc.translate('save_transaction'),
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
